@@ -15,11 +15,11 @@ E3 = np.array([0,0,1])
 xbar_hoop = sp.symbols('xbar_hoop:3')   # Creates xbar_hoop0, xbar_hoop1, xbar_hoop2
 xbar_hip = sp.symbols('xbar_hip:3')     # Creates xbar_hip0, xbar_hip1, xbar_hip2
 
-# Definining velocity variables
+# Defining velocity variables
 vbar_hoop = sp.symbols('vbar_hoop:3')     # Creates vB0, vB1, vB2
 vbar_hip = sp.symbols('vbar_hip:3')     # Creates vD0, vD1, vD2
 
-# Definining acceleration variables
+# Defining acceleration variables
 abar_hoop = sp.symbols('abar_hoop:3')     # Creates aB0, aB1, aB2
 abar_hip = sp.symbols('abar_hip:3')     # Creates aD0, aD1, aD2
 
@@ -36,7 +36,7 @@ thetaddot = sp.symbols('thetaddot')
 phiddot = sp.symbols('phiddot')
 
 # Define the array of variables that are a function of time
-# NOTE: I will just take derivative with respect vars, not beta and gamma
+# NOTE: I will just take derivative with respect vars, not tau and gamma
 vars = np.array([xbar_hoop[0], xbar_hoop[1], xbar_hoop[2], psi, theta, phi, xbar_hip[0], xbar_hip[1], xbar_hip[2]])
 varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot, thetadot, phidot, vbar_hip[0], vbar_hip[1], vbar_hip[2]])
 varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot, thetaddot, phiddot, abar_hip[0], abar_hip[1], abar_hip[2]])
@@ -56,8 +56,8 @@ omega_hoop = psidot*E3+thetadot*e1p+phidot*e3
 
 ## Slip speed constraint gradient
 # right handed orthonormal basis of contact point
-n = sp.cos(tau)*E1+sp.sin(tau)*E2
-t1 = -sp.sin(tau)*E1+sp.cos(tau)*E2
+n = sp.cos(tau)*e1+sp.sin(tau)*e2
+t1 = -sp.sin(tau)*e1+sp.cos(tau)*e2
 t2 = np.cross(n,t1)
 
 # position vector of point on hoop

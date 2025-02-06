@@ -18,7 +18,7 @@ E1 = [1;0;0];
 E2 = [0;1;0];
 E3 = [0;0;1];
 
-animation = VideoWriter('3D_hoop.avi');
+animation = VideoWriter('3D_hoop2.avi');
 animation.FrameRate = 100;
 open(animation);
 
