@@ -1,0 +1,24 @@
+gNdot = -vbar_hip[iter,0]*np.cos(tau) - vbar_hip[iter,1]*np.sin(tau) + vbar_hoop[0]*np.cos(tau) + vbar_hoop[1]*np.sin(tau)
+gNddot = -abar_hip[iter,0]*np.cos(tau) - abar_hip[iter,1]*np.sin(tau) + abar_hoop[0]*np.cos(tau) + abar_hoop[1]*np.sin(tau)
+
+WN[0,0] = np.cos(tau)
+WN[0,1] = np.sin(tau)
+WN[0,2] = 0
+WN[0,3] = 0
+WN[0,4] = 0
+WN[0,5] = 0
+
+WF[0,0] = 0
+WF[0,1] = 0
+WF[0,2] = 0
+WF[0,3] = 0
+WF[0,4] = R_hoop*phidot*np.sin(tau)**2*np.sin(theta) + R_hoop*phidot*np.sin(theta)*np.cos(tau)**2
+WF[0,5] = 0
+
+WF[1,0] = 0
+WF[1,1] = 0
+WF[1,2] = 0
+WF[1,3] = (R_hoop*(phidot*np.sin(psi)*np.sin(theta) + thetadot*np.cos(psi))*np.cos(tau) - R_hoop*(phidot*np.sin(theta)*np.cos(psi) - thetadot*np.sin(psi))*np.sin(tau))*(np.sin(tau)**2 + np.cos(tau)**2)
+WF[1,4] = (-R_hoop*phidot*np.sin(psi)*np.sin(tau)*np.cos(theta) - R_hoop*phidot*np.cos(psi)*np.cos(tau)*np.cos(theta))*(np.sin(tau)**2 + np.cos(tau)**2)
+WF[1,5] = 0
+

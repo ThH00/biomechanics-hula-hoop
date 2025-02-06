@@ -1,0 +1,45 @@
+% loading the outputs of the generalized-alpha algorithm
+load("q.mat")
+
+% loading coodinates of the hip center
+load("xD.mat")
+
+% plot the fixed hip
+
+
+
+figure()
+axis([-2 2 -2 2])
+box on
+axis equal
+
+hold on
+
+animation = VideoWriter('hoop_hip_bump_eN_0.5_hoop_rot.avi');
+animation.FrameRate = 100;
+open(animation);
+
+% [circle_hip, center_hip, angle_hip] = plot_circle(0.5, [0,0], 0, 'k');
+
+for i = 1:size(q,1)
+
+    hold on
+
+    [circle_hip, center_hip, angle_hip] = plot_circle(0.3, [xD(i,1), xD(i,2)], 0, 'k');
+    [circle_hoop, center_hoop, angle_hoop] = plot_circle(0.6, q(i,1:2), q(i,3), 'b');
+    axis([-2 2 -2 2])
+    drawnow
+    writeVideo(animation, getframe(gcf))
+
+    pause(0.001)
+
+    delete(circle_hip)
+    % delete(center_hip)
+    delete(angle_hip)
+
+    delete(circle_hoop)
+    % delete(center_hoop)
+    delete(angle_hoop)
+end
+
+close(animation)
