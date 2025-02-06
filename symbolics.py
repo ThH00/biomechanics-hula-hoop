@@ -101,19 +101,19 @@ WN5 = grad[5]
 gammaF1 = np.dot(vP-vQ,t1)
 gammaF2 = np.dot(vP-vQ,t2)
 
-WF1_0 = sp.diff(gammaF1, xbar_hoop[0])
-WF1_1 = sp.diff(gammaF1, xbar_hoop[1])
-WF1_2 = sp.diff(gammaF1, xbar_hoop[2])
-WF1_3 = sp.diff(gammaF1, psi)
-WF1_4 = sp.diff(gammaF1, theta)
-WF1_5 = sp.diff(gammaF1, phi)
+WF1_0 = sp.diff(gammaF1, vbar_hoop[0])
+WF1_1 = sp.diff(gammaF1, vbar_hoop[1])
+WF1_2 = sp.diff(gammaF1, vbar_hoop[2])
+WF1_3 = sp.diff(gammaF1, psidot)
+WF1_4 = sp.diff(gammaF1, thetadot)
+WF1_5 = sp.diff(gammaF1, phidot)
 
-WF2_0 = sp.diff(gammaF2, xbar_hoop[0])
-WF2_1 = sp.diff(gammaF2, xbar_hoop[1])
-WF2_2 = sp.diff(gammaF2, xbar_hoop[2])
-WF2_3 = sp.diff(gammaF2, psi)
-WF2_4 = sp.diff(gammaF2, theta)
-WF2_5 = sp.diff(gammaF2, phi)
+WF2_0 = sp.diff(gammaF2, vbar_hoop[0])
+WF2_1 = sp.diff(gammaF2, vbar_hoop[1])
+WF2_2 = sp.diff(gammaF2, vbar_hoop[2])
+WF2_3 = sp.diff(gammaF2, psidot)
+WF2_4 = sp.diff(gammaF2, thetadot)
+WF2_5 = sp.diff(gammaF2, phidot)
 
 ## Preparing expressions for numpy
 
