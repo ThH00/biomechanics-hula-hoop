@@ -3,6 +3,8 @@
 ## Importing packages
 import numpy as np
 from scipy.optimize import minimize
+import sympy as sp
+from scipy.signal import argrelextrema
 
 ## Problem constants
 gr = 9.81           # m/s^2, gravitational acceleration
@@ -21,28 +23,30 @@ t_arr = np.arange(0, ntime*dtime, dtime)
 # hip axis properties
 # position of the hip center
 
-# The hip center is tracing an ellipse
-# Position of the bottom center of hip (bottom of hip aixs)
-x1bar_hip = 0.2*np.cos(5*t_arr)
-x2bar_hip = 0.6*np.sin(5*t_arr)
-xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
-# velocity of the bottom center of hip
-v1bar_hip = -0.2*5*np.sin(5*t_arr)
-v2bar_hip = 0.6*5*np.cos(5*t_arr)
-vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
-# acceleration of the bottom center of hip
-a1bar_hip = -0.2*25*np.cos(5*t_arr)
-a2bar_hip = -0.6*25*np.sin(5*t_arr)
-abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+# # The hip center is tracing an ellipse
+# # Position of the bottom center of hip (bottom of hip axis)
+# x1bar_hip = 0.2*np.cos(5*t_arr)
+# x2bar_hip = 0.6*np.sin(5*t_arr)
+# xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
+# # velocity of the bottom center of hip
+# v1bar_hip = -0.2*5*np.sin(5*t_arr)
+# v2bar_hip = 0.6*5*np.cos(5*t_arr)
+# vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
+# # acceleration of the bottom center of hip
+# a1bar_hip = -0.2*25*np.cos(5*t_arr)
+# a2bar_hip = -0.6*25*np.sin(5*t_arr)
+# abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
 
-# The center of fixed.
-# position of the bottom center of hip (bottom of hip aixs)
-# xbar_hip = np.zeros((ntime,3))
+# The hip center is fixed
+R_hip = 0.2
+# Position of the bottom center of hip (bottom of hip aixs)
+xbar_hip = np.zeros((ntime,3))
 # velocity of the bottom center of hip
-# vbar_hip = np.zeros((ntime,3))
+vbar_hip = np.zeros((ntime,3))
 # acceleration of the bottom center of hip
-# abar_hip = np.zeros((ntime,3))
-   
+abar_hip = np.zeros((ntime,3))
+
+# Angular velocity and angular acceleration of hip
 # omega_hip = np.array([0,0,1])   # angular velocity of hip
 omega_hip = np.array([0,0,0])   # angular velocity of hip
 alpha_hip = np.array([0,0,0])   # angular acceleration of hip
@@ -59,7 +63,7 @@ eN = 0.5                # dimensionless, normal impact restitution coefficient
 eF = 0                  # dimensionless, tangential impact restitution coefficient
 
 # friction coefficients
-mu_s = 1              # dimensionless, static friction coefficient
+mu_s = 0.8              # dimensionless, static friction coefficient
 mu_k = 0.2              # dimensionless, kinetic friction coefficient
 
 
@@ -76,13 +80,13 @@ r = 0.3
 
 # loop parameters
 maxiter_n = 100
-tol_n = 1.0e-8
+tol_n = 1.0e-6
 
 ## Kinetic quantites
 ng = 0                  # number of position level constraints
-nN = 1                  # number of no penetration contact constraints
+nN = 2                  # number of no penetration contact constraints
 ngamma = 0              # number of velocity level constraints
-nF = 2                  # slip speed constraints/friction force
+nF = 4                  # slip speed constraints/friction force
 
 ## Initialize arrays to save results
 
@@ -95,7 +99,7 @@ q = np.zeros((ntime,ndof))
 u = np.zeros((ntime,ndof))
 
 # initial values
-q0 = np.array([0.1, 0, 1, 0, 0, 0])
+q0 = np.array([0.1, 0, 1, 0, np.pi/6, 0])
 u0 = np.array([1, 0, 0, 0, 0, 0])
 
 nX = 3*ndof+3*ng+2*ngamma+3*nN+2*nF
@@ -170,32 +174,64 @@ def get_hoop_hip_contact(q,u,a):
 
     alpha_hoop = psiddot*E3+thetaddot*e1p+thetadot*e1pdot+phiddot*e3+phidot*e3dot
 
-    # distance function between hip and hoop
-    def d2_calc(vars):
+    n_tau = int(1/tol_n)
+    tau = np.linspace(0, 2*np.pi, num=n_tau, endpoint=False)
+    # I can find minima interval and then refine the discretization in the particular interval
 
-        x3 = vars[0]
-        tau = vars[1]
+    n = np.zeros((3,n_tau))
+    nH = np.zeros((3,n_tau))
+    dH = np.zeros(n_tau)
 
-        # position vector of point on hoop
-        xhoop = xbar_hoop+R_hoop*(np.cos(tau)*e1+np.sin(tau)*e2)
+    # # Compute n using broadcasting
+    # n = np.outer(e1, np.cos(tau)) + np.outer(e2, np.sin(tau))
+
+    # # Compute horizontal projection of n
+    # temp = n - np.outer(E3, np.dot(E3, n))
+
+    # # Normalize nH
+    # nH = temp / np.linalg.norm(temp, axis=0)
+
+    # # Compute horizontal distance
+    # dH = np.einsum('ij,ij->j', xbar_hoop[:, None] + R_hoop * n - xbar_hip[:, None], nH)
+
+    for i in range(n_tau):
+        # n is a vector along the radius of the hoop making an angle tau with e1
+        # tau varies between [0,2*pi)
+        n[:,i] = np.cos(tau[i])*e1+np.sin(tau[i])*e2
+        # horizontal projection of n
+        temp = n[:,i]-np.dot(n[:,i],E3)
+        nH[:,i] = temp/np.linalg.norm(temp)
+        # horinzontal distance
+        dH[i] = np.dot(xbar_hoop+R_hoop*n-xbar_hip,nH)
+
+    # Find local minima (less than neighbors)
+    min_indices = argrelextrema(dH, np.less)[0]
+
+    # Extract maxima and minima values
+    min_values = dH[min_indices]
+
+    # Display results
+    print("Local minima (index, value):", list(zip(min_indices, min_values)))
+
+    # Find the minizing value of tau
+    minimizing_tau = tau[min_indices]
+
+    # Minimizing value of n
+    minimizing_n = n[:,min_indices]
+
+    # Number of minimizers
+    num_minimizers = np.size(minimizing_tau)
+
+    minimizing_x3 = np.zeros(num_minimizers)
+    for i in range(num_minimizers):
+        minimizing_x3[i] = np.dot(xbar_hoop + R_hoop * minimizing_n[:,i] - xbar_hip, E3)
     
-        # position vector of point on hip
-        # a_z = 0.5-0.4*x3 # here is where you shape the hoop. you need to change these in gN also. maybe make a change introduce dR_hip by dvariables
-        R_hip = 0.2
-        xhip = xbar_hip[iter,:]+R_hip*np.cos(tau)*e1+R_hip*np.sin(tau)*e2+x3*E3
 
-        d2 = np.dot(xhoop-xhip,xhoop-xhip)
-
-        return d2
     
-    # Initial guess
-    vars_guess = [0.5, np.pi]
+    ###############################################
 
-    # Perform the minimization using the Nelder-Mead method
-    result = minimize(d2_calc, vars_guess, method='Nelder-Mead')
 
-    x3 = result.x[0]        # minimizing x3
-    tau =  result.x[1]     # minimizing beta
+    gN = dH/np.cos(theta)
 
     # right handed orthonormal basis of contact point
     n = np.cos(tau)*e1+np.sin(tau)*e2
@@ -204,7 +240,7 @@ def get_hoop_hip_contact(q,u,a):
 
     xhoop = xbar_hoop+R_hoop*n
     R_hip = 0.2
-    xhip = xbar_hip[iter,:]+R_hip*n+x3*E3
+    xhip = xbar_hip[iter,:]+R_hip*n+x3*E3 # this is not true. need to have a trigonometric function of theta somewhere
 
     gN = np.dot(xhoop-xhip,n)
     gNdot = -vbar_hip[iter,0]*np.cos(tau) - vbar_hip[iter,1]*np.sin(tau) + vbar_hoop[0]*np.cos(tau) + vbar_hoop[1]*np.sin(tau)
@@ -218,7 +254,6 @@ def get_hoop_hip_contact(q,u,a):
     WN[0,3] = ((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - 0.2*(-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) - 0.2*(-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) + ((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[iter,0] + xbar_hoop[0] - 0.2*(-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) - 0.2*(-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) + ((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.cos(tau)) - 0.2*(np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - 0.2*(-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.cos(tau)) + ((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[iter,1] + xbar_hoop[1] - 0.2*(-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - 0.2*(np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))
     WN[0,4] = ((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*(-np.sin(phi)*np.sin(theta)*np.cos(psi)*np.cos(tau) - np.sin(tau)*np.sin(theta)*np.cos(phi)*np.cos(psi)) + 0.2*np.sin(phi)*np.sin(theta)*np.cos(psi)*np.cos(tau) + 0.2*np.sin(tau)*np.sin(theta)*np.cos(phi)*np.cos(psi)) + ((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*(np.sin(phi)*np.sin(psi)*np.sin(theta)*np.cos(tau) + np.sin(psi)*np.sin(tau)*np.sin(theta)*np.cos(phi)) - 0.2*np.sin(phi)*np.sin(psi)*np.sin(theta)*np.cos(tau) - 0.2*np.sin(psi)*np.sin(tau)*np.sin(theta)*np.cos(phi)) + (np.sin(phi)*np.sin(theta)*np.cos(tau) + np.sin(tau)*np.sin(theta)*np.cos(phi))*(R_hoop*(np.sin(phi)*np.cos(tau)*np.cos(theta) + np.sin(tau)*np.cos(phi)*np.cos(theta)) - 0.2*np.sin(phi)*np.cos(tau)*np.cos(theta) - 0.2*np.sin(tau)*np.cos(phi)*np.cos(theta)) + (np.sin(phi)*np.cos(tau)*np.cos(theta) + np.sin(tau)*np.cos(phi)*np.cos(theta))*(R_hoop*(np.sin(phi)*np.sin(theta)*np.cos(tau) + np.sin(tau)*np.sin(theta)*np.cos(phi)) - xbar_hip[iter,2] + xbar_hoop[2] - 0.2*np.sin(phi)*np.sin(theta)*np.cos(tau) - 0.2*np.sin(tau)*np.sin(theta)*np.cos(phi)) + (np.sin(phi)*np.sin(psi)*np.sin(theta)*np.cos(tau) + np.sin(psi)*np.sin(tau)*np.sin(theta)*np.cos(phi))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[iter,0] + xbar_hoop[0] - 0.2*(-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) - 0.2*(-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) + (-np.sin(phi)*np.sin(theta)*np.cos(psi)*np.cos(tau) - np.sin(tau)*np.sin(theta)*np.cos(phi)*np.cos(psi))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[iter,1] + xbar_hoop[1] - 0.2*(-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - 0.2*(np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))
     WN[0,5] = ((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.cos(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.sin(tau)) - 0.2*(-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.cos(tau) - 0.2*(-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.sin(tau)) + ((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.cos(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.sin(tau))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[iter,1] + xbar_hoop[1] - 0.2*(-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - 0.2*(np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + ((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.cos(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.sin(tau)) - 0.2*(-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.cos(tau) - 0.2*(np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.sin(tau)) + ((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.cos(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.sin(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[iter,0] + xbar_hoop[0] - 0.2*(-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) - 0.2*(-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) + (-np.sin(phi)*np.sin(tau)*np.sin(theta) + np.sin(theta)*np.cos(phi)*np.cos(tau))*(R_hoop*(np.sin(phi)*np.sin(theta)*np.cos(tau) + np.sin(tau)*np.sin(theta)*np.cos(phi)) - xbar_hip[iter,2] + xbar_hoop[2] - 0.2*np.sin(phi)*np.sin(theta)*np.cos(tau) - 0.2*np.sin(tau)*np.sin(theta)*np.cos(phi)) + (np.sin(phi)*np.sin(theta)*np.cos(tau) + np.sin(tau)*np.sin(theta)*np.cos(phi))*(R_hoop*(-np.sin(phi)*np.sin(tau)*np.sin(theta) + np.sin(theta)*np.cos(phi)*np.cos(tau)) + 0.2*np.sin(phi)*np.sin(tau)*np.sin(theta) - 0.2*np.sin(theta)*np.cos(phi)*np.cos(tau))
-
 
 
     # Position vectors to points P and Q

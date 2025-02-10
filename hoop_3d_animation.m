@@ -8,8 +8,9 @@ figure()
 hold on
 xlim([-2, 2])
 ylim([-2, 2])
-zlim([0, 1])
-view(45, 45)
+zlim([-2, 2])
+% view(45, 45)
+view(2)
 axis equal
 box on
 
@@ -18,7 +19,7 @@ E1 = [1;0;0];
 E2 = [0;1;0];
 E3 = [0;0;1];
 
-animation = VideoWriter('3D_hoop2.avi');
+animation = VideoWriter('3D_hoop3_top.avi');
 animation.FrameRate = 100;
 open(animation);
 
@@ -26,7 +27,7 @@ ang_arr = linspace(0,2*pi,100);
 R_hoop = 0.5;
 
 % plot the cone
-z = linspace(0,1,100);
+z = linspace(-1.5,1.5,100);
 % r = 0.5-0.4*z;
 r = 0.2*ones(100,1);
 hold on
@@ -35,8 +36,9 @@ for i = 1:length(q)
 
     xlim([-2, 2])
     ylim([-2, 2])
-    zlim([0, 1])
-    view(30,10)
+    zlim([-2, 2])
+    % view(30,10)
+    view(2)
 
     x1 = q(i,1);
     x2 = q(i,2);
@@ -82,9 +84,11 @@ for i = 1:length(q)
     e3_plot = quiver3(x1, x2, x3, e3(1), e3(2), e3(3),'b');
 
     % plotting the hip
-    for j = 1:length(ang_arr)
+    for j = 1:2:length(ang_arr)
         hip(j) = plot3(xbar_hip(i,1)+r*cos(ang_arr(j)),xbar_hip(i,2)+r*sin(ang_arr(j)),z,'k');
     end
+
+    [circle_hip, center_hip, angle_hip] = plot_circle(0.2, [xbar_hip(i,1), xbar_hip(i,2)], 0, 'k');
 
     % plotting the hoop
     circle = plot3(x1+R_hoop*cos(ang_arr)*e1(1)+R_hoop*sin(ang_arr)*e2(1), ...
@@ -103,6 +107,9 @@ for i = 1:length(q)
     delete(e3_plot)
     delete(circle)
     delete(hip)
+
+    delete(circle_hip)
+    delete(angle_hip)
 
 end
 
