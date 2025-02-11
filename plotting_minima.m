@@ -1,3 +1,5 @@
+% plotting minimizing points on static hoop configuration
+
 % Hoop position coordinates
 R_hoop = 0.5;
 xbar_hoop = [0.1, 0, 1];

@@ -5,9 +5,6 @@ load("q.mat")
 load("xD.mat")
 
 % plot the fixed hip
-
-
-
 figure()
 axis([-2 2 -2 2])
 box on

@@ -19,8 +19,6 @@ disp([find(local_max_idx)', local_max_values']);
 disp('Local minima:');
 disp([find(local_min_idx)', local_min_values']);
 
-
-
 figure()
 plot(y)
 hold on
