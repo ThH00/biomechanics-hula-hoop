@@ -6,6 +6,11 @@ from scipy.optimize import minimize
 import sympy as sp
 from scipy.signal import argrelextrema
 
+# Define a custom error
+class NoLocalMinima(Exception):
+    def __init__(self, message="The distance between the hoop and the hip has less then 1 or more than 2 local minima."):
+        super().__init__(message)
+
 ## Problem constants
 gr = 9.81           # m/s^2, gravitational acceleration
 
@@ -86,6 +91,7 @@ ng = 0                  # number of position level constraints
 nN = 2                  # number of no penetration contact constraints
 ngamma = 0              # number of velocity level constraints
 nF = 4                  # slip speed constraints/friction force
+gammaF_lim = np.array([[0,1],[2,3]])
 
 ## Initialize arrays to save results
 
@@ -135,138 +141,93 @@ def get_x_components(x):
 def sign_no_zero(x):
     return np.where(x >= 0, 1, -1)
 
-def get_hoop_hip_contact(q,u,a):
+def get_minimizing_tau(q, xbar_hip):
 
     # center of hoop
     xbar_hoop = q[:3]
-    vbar_hoop = u[:3]
-    abar_hoop = a[:3] 
-
     # Euler angles of hoop
     psi = q[3]
     theta = q[4]
     phi = q[5]
-    
-    psidot = u[3]
-    thetadot = u[4]
-    phidot = u[5]
-
-    psiddot = a[3]
-    thetaddot = a[4]
-    phiddot = a[5]
-
     # Rotation matrices
     R1 = np.array([[np.cos(psi), np.sin(psi), 0],[-np.sin(psi), np.cos(psi), 0],[0, 0, 1]])
     R2 = np.array([[1, 0, 0],[0, np.cos(theta), np.sin(theta)],[0, -np.sin(theta), np.cos(theta)]])
     R3 = np.array([[np.cos(phi), np.sin(phi), 0],[-np.sin(phi), np.cos(phi), 0],[0, 0, 1]])
-
     # {E1, E2, E3} components
-    e1p = np.transpose(R1)@E1
     e1 = np.transpose(R3@R2@R1)@E1
     e2 = np.transpose(R3@R2@R1)@E2
-    e3 = np.transpose(R3@R2@R1)@E3
 
-    omega_hoop = psidot*E3+thetadot*e1p+phidot*e3
-
-    e1pdot = np.cross(psidot*E3,e1p)
-    e3dot = np.cross(omega_hoop, e3)
-
-    alpha_hoop = psiddot*E3+thetaddot*e1p+thetadot*e1pdot+phiddot*e3+phidot*e3dot
-
+    # Create an array of possible tau values (step size < algorithm tolerance)
     n_tau = int(1/tol_n)
     tau = np.linspace(0, 2*np.pi, num=n_tau, endpoint=False)
-    # I can find intervals containing the minima and then refine the discretization in the particular interval (or use the bisection method)
+    # I can find intervals containing the minima and then refine the discretization in these intervals (or use the bisection method)
 
-    n = np.zeros((3,n_tau))
-    nH = np.zeros((3,n_tau))
-    dH = np.zeros(n_tau)
+    # Creating array of hoop points
+    u = np.cos(tau)*e1+np.sin(tau).e2   # check size
+    xM = xbar_hoop+R_hoop*u
 
-    for i in range(n_tau):
-        # n is a vector along the radius of the hoop making an angle tau with e1
-        # tau varies between [0,2*pi)
-        n[:,i] = np.cos(tau[i])*e1+np.sin(tau[i])*e2
-        # horizontal projection of n
-        temp = n[:,i]-np.dot(n[:,i],E3)
-        nH[:,i] = temp/np.linalg.norm(temp)
-        # horinzontal distance
-        dH[i] = np.dot(xbar_hoop+R_hoop*n-xbar_hip,nH)-R_hip
+    # Calculating the value of dH for each point
+    dv = np.dot(xM,E3)
+    dh = xM-dv*E3-xbar_hip
 
+    # Find the minimizers of dh
     # Find local minima (less than neighbors)
-    min_indices = argrelextrema(dH, np.less)[0]
-
-    # Extract maxima and minima values
-    min_values = dH[min_indices]
-
-    # Display results
-    print("Local minima (index, value):", list(zip(min_indices, min_values)))
-
+    min_indices = argrelextrema(dh, np.less)[0]
     # Find the minizing value of tau
     minimizing_tau = tau[min_indices]
+    # Find the minimizing value of dv
+    minimizing_dv = dv[min_indices]
 
-    # Minimizing value of n
-    minimizing_n = n[:,min_indices]
+    return minimizing_tau, minimizing_dv
 
-    # Number of minimizers
-    num_minimizers = np.size(minimizing_tau)
-
-    minimizing_x3 = np.zeros(num_minimizers)
-    for i in range(num_minimizers):
-        minimizing_x3[i] = np.dot(xbar_hoop + R_hoop * minimizing_n[:,i] - xbar_hip, E3)
-    
-
-    
-    ###############################################
-
-
-    gN = dH/np.cos(theta)
-
-    # right handed orthonormal basis of contact point
-    n = np.cos(tau)*e1+np.sin(tau)*e2
-    t1 = -np.sin(tau)*e1+np.cos(tau)*e2
-    t2 = np.cross(n,t1)
-
-    xhoop = xbar_hoop+R_hoop*n
-    R_hip = 0.2
-    xhip = xbar_hip[iter,:]+R_hip*n+x3*E3 # this is not true. need to have a trigonometric function of theta somewhere
-
-    gN = np.dot(xhoop-xhip,n)
-    gNdot = -vbar_hip[iter,0]*np.cos(tau) - vbar_hip[iter,1]*np.sin(tau) + vbar_hoop[0]*np.cos(tau) + vbar_hoop[1]*np.sin(tau)
-    gNddot = -abar_hip[iter,0]*np.cos(tau) - abar_hip[iter,1]*np.sin(tau) + abar_hoop[0]*np.cos(tau) + abar_hoop[1]*np.sin(tau)
-
-    WN = np.zeros((nN,ndof))
-
-
-    # Position vectors to points P and Q
-    xQ = xbar_hoop+R_hoop*n
-    xP = xbar_hip[iter,:]+R_hip*n
-
-    # Velocities of points P and Q
-    vQ = vbar_hoop+np.cross(omega_hoop,xQ-xbar_hoop)
-    vP = vbar_hip[iter,:]+np.cross(omega_hip,xP-xbar_hip[iter,:])
-
-    # Slip speeds
-    gammaF1 = np.dot(vP-vQ,t1)
-    gammaF2 = np.dot(vP-vQ,t2)
-
-    gammaF = np.array([gammaF1, gammaF2])
-
-    # Slip speed derivatives
-    aQ = abar_hoop+np.cross(alpha_hoop,xQ-xbar_hoop)+np.cross(omega_hoop,vQ-vbar_hoop)
-    aP = abar_hip[iter,:]+np.cross(alpha_hip,xP-xbar_hip[iter,:])+np.cross(omega_hip,vP-vbar_hip[iter,:])
-
-    t1dot = np.cross(omega_hoop,t1)
-    t2dot = np.cross(omega_hoop,t2)
-
-    gammadotF1 = np.dot(aP-aQ,t1)+np.dot(vP-vQ,t1dot)
-    gammadotF2 = np.dot(aP-aQ,t2)+np.dot(vP-vQ,t2dot)
-
-    gammadotF = np.array([gammadotF1, gammadotF2])
+def get_contact_constraints():
+    # gets gap distance, slip speed functions and their gradients and derivatives at each contact
 
     WF = np.zeros((nF, ndof))
 
 
+    # here
 
-    return gN, gNdot, gNddot, WN, gammaF, gammadotF, WF
+
+    gammaF = np.array([gammaF1, gammaF2])
+    gammadotF = np.array([gammadotF1, gammadotF2])
+
+    
+    
+    return gN, gNdot, gNddot, 
+
+def combine_contact_constraints(q,u,a):
+    # combine all gap distance, slip speed functions and the gradients and derivatives from both contacts
+
+    # get the minimizing values
+    tau, dv = get_minimizing_tau(q,u,a)
+    
+    # Contact constraints and constraint gradients
+    # initializing constraints
+    gN = np.zeros(nN)
+    gammaF = np.zeros(nF)
+    # initialize constraint derivatives
+    gNdot = np.zeros(nN)
+    gNddot = np.zeros(nN)
+    gammadotF = np.zeros(nF)
+    # initializing constraint gradients
+    WN = np.zeros((nN, ndof))
+    WF = np.zeros((nF, ndof))
+
+    if np.shape(tau) == 2:  # two local minima
+        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0])
+        gN[1], gNdot[1], gNddot[1], WN[1,:], gammaF[gammaF_lim[1,:]], gammadotF[gammaF_lim[1,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[1],dv[1])
+    elif np.shape(tau) == 1:
+        # This case is rare if the hoop is not initialized to a horizontal configuration
+        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0])
+        gN[1] = 1   # >0, no contact, we don't worry about other values
+        # concern: nonsmooth jumps in contact functions
+    else:
+        # raise error
+        # this error might be raised when the hoop is horizontal and centered at the hip, in which case there is no contact between hoop and hip and code proceeds normally
+        raise NoLocalMinima()
+
+    return
 
 
 def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_sets):
@@ -346,7 +307,7 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
     R_LambdaF = np.zeros(nF)  # (138)
     R_lambdaF = np.zeros(nF)  # (142)
 
-    gammaF_lim = np.array([[0,1]])
+    
 
     if index_sets == ():
         A = np.zeros(nN, dtype=int)
