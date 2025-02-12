@@ -184,7 +184,7 @@ def get_minimizing_tau(q, xbar_hip):
 
     return minimizing_tau, minimizing_dv
 
-def get_contact_constraints(q,u,a,tau,xbar_hip,vbar_hip,abar_hip):
+def get_contact_constraints(q,u,a,tau,dv,xbar_hip,vbar_hip,abar_hip):
     # gets gap distance, slip speed functions and their gradients and derivatives at each contact
     
     # center of hoop
@@ -259,12 +259,12 @@ def combine_contact_constraints(q,u,a):
     WN = np.zeros((nN, ndof))
     WF = np.zeros((nF, ndof))
 
-    if np.shape(tau) == 2:  # two local minima
-        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0])
-        gN[1], gNdot[1], gNddot[1], WN[1,:], gammaF[gammaF_lim[1,:]], gammadotF[gammaF_lim[1,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[1],dv[1])
-    elif np.shape(tau) == 1:
+    if np.size(tau) == 2:  # two local minima
+        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
+        gN[1], gNdot[1], gNddot[1], WN[1,:], gammaF[gammaF_lim[1,:]], gammadotF[gammaF_lim[1,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[1],dv[1],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
+    elif np.size(tau) == 1:
         # This case is rare if the hoop is not initialized to a horizontal configuration
-        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0])
+        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
         gN[1] = 1   # >0, no contact, we don't worry about other values
         # concern: nonsmooth jumps in contact functions
     else:
@@ -410,7 +410,7 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
     if index_sets == ():
         norm_R = np.linalg.norm(Res,np.inf)
         print(f'norm_R = {norm_R}')
-        print(f'gN = {gN[0]}')
+        print(f'gN = [{gN[0]}, {gN[1]}]')
         gN_save[0,iter] = gN[0]
         return Res, AV, gNdot, gammaF, q, u, A, B, C, D, E
     else:
