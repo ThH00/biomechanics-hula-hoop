@@ -163,12 +163,16 @@ def get_minimizing_tau(q, xbar_hip):
     # I can find intervals containing the minima and then refine the discretization in these intervals (or use the bisection method)
 
     # Creating array of hoop points
-    u = np.cos(tau)*e1+np.sin(tau).e2   # check size
+    # # Reshape tau to (1000000, 1) to enable broadcasting
+    u = np.cos(tau)[:, np.newaxis] * e1 + np.sin(tau)[:, np.newaxis] * e2  # Shape (1000000, 3)
+
     xM = xbar_hoop+R_hoop*u
 
     # Calculating the value of dH for each point
     dv = np.dot(xM,E3)
-    dh = xM-dv*E3-xbar_hip
+    temp = xM-dv[:, np.newaxis]*E3-xbar_hip
+    # Compute the norm of each row
+    dh = np.linalg.norm(temp, axis=1)
 
     # Find the minimizers of dh
     # Find local minima (less than neighbors)
@@ -241,7 +245,7 @@ def combine_contact_constraints(q,u,a):
     # combine all gap distance, slip speed functions and the gradients and derivatives from both contacts
 
     # get the minimizing values
-    tau, dv = get_minimizing_tau(q,u,a)
+    tau, dv = get_minimizing_tau(q,xbar_hip[iter,:])
     
     # Contact constraints and constraint gradients
     # initializing constraints
@@ -268,7 +272,7 @@ def combine_contact_constraints(q,u,a):
         # this error might be raised when the hoop is horizontal and centered at the hip, in which case there is no contact between hoop and hip and code proceeds normally
         raise NoLocalMinima()
 
-    return
+    return gN, gNdot, gNddot, WN, gammaF, gammadotF, WF
 
 
 def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_sets):
@@ -309,22 +313,15 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
     # initializing constraints
     g = np.zeros(ng)
     gamma = np.zeros(ngamma)
-    gN = np.zeros(nN)
-    gammaF = np.zeros(nF)
     # initialize constraint derivatives
     gdot = np.zeros(ng)
     gddot = np.zeros(ng)
     gammadot = np.zeros(ngamma)
-    gNdot = np.zeros(nN)
-    gNddot = np.zeros(nN)
-    gammadotF = np.zeros(nF)
     # initializing constraint gradients
     Wg = np.zeros((ng, ndof))
     Wgamma = np.zeros((ngamma, ndof))
-    WN = np.zeros((nN, ndof))
-    WF = np.zeros((nF, ndof))
 
-    gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF, gammadotF, WF = get_hoop_hip_contact(q,u,a)
+    gN, gNdot, gNddot, WN, gammaF, gammadotF, WF = combine_contact_constraints(q,u,a)
 
     # Kinetic quantities
     # normal
