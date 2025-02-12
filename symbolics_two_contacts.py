@@ -168,6 +168,7 @@ def prep_for_numpy(string):
 
     return(string)
 
+gN = prep_for_numpy(str(gN))
 gNdot = prep_for_numpy(str(gNdot))
 gNddot = prep_for_numpy(str(gNddot))
 
@@ -177,6 +178,11 @@ WN2 = prep_for_numpy(str(WN2))
 WN3 = prep_for_numpy(str(WN3))
 WN4 = prep_for_numpy(str(WN4))
 WN5 = prep_for_numpy(str(WN5))
+
+gammaF1 = prep_for_numpy(str(gammaF1))
+gammaF2 = prep_for_numpy(str(gammaF2))
+gammadotF1 = prep_for_numpy(str(gammadotF1))
+gammadotF2 = prep_for_numpy(str(gammadotF2))
 
 WF1_0 = prep_for_numpy(str(WF1_0))
 WF1_1 = prep_for_numpy(str(WF1_1))
@@ -200,6 +206,7 @@ WF2_5 = prep_for_numpy(str(WF2_5))
 # Open the file in append mode
 with open("output.txt", "a") as file:
     # Append the string to the file
+    file.write(f'gN = {gN}\n')
     file.write(f'gNdot = {gNdot}\n')
     file.write(f'gNddot = {gNddot}\n\n')
 
@@ -209,6 +216,11 @@ with open("output.txt", "a") as file:
     file.write(f'WN[0,3] = {WN3}\n')
     file.write(f'WN[0,4] = {WN4}\n')
     file.write(f'WN[0,5] = {WN5}\n\n')
+
+    file.write(f'gammaF1 = {gammaF1}\n')
+    file.write(f'gammaF2 = {gammaF2}\n')
+    file.write(f'gammadotF1 = {gammadotF1}\n')
+    file.write(f'gammadotF2 = {gammadotF2}\n\n')
 
     file.write(f'WF[0,0] = {WF1_0}\n')
     file.write(f'WF[0,1] = {WF1_1}\n')
