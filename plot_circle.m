@@ -12,7 +12,7 @@ circle = plot(x, y, color, 'LineWidth', 2); % Blue circle
 angle = plot(c(1) + r * cos(a), c(2) + r * sin(a), '+', 'color', color, 'MarkerSize', 10, 'LineWidth', 2);
 hold on;
 center = plot(c(1), c(2), '.', 'MarkerSize', 10, 'LineWidth', 2, 'color', color); % Mark the center
-axis equal; % Ensure equal scaling for both axes
+% axis equal; % Ensure equal scaling for both axes
 grid on;
 box on;
 

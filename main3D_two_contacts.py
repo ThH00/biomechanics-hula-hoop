@@ -21,7 +21,7 @@ E3 = np.array([0,0,1])
 
 ## Simulation parameters
 ti = 0              # s, initial time
-ntime = 500        # dimensionless, number of iterations
+ntime = 100        # dimensionless, number of iterations
 dtime = 2e-3        # s, time step duration
 t_arr = np.arange(0, ntime*dtime, dtime)
 
@@ -104,8 +104,8 @@ q = np.zeros((ntime,ndof))
 u = np.zeros((ntime,ndof))
 
 # initial values
-q0 = np.array([0.1, 0, 1, 0, np.pi/6, 0])
-u0 = np.array([1, 0, 0, 0, 0, 0])
+q0 = np.array([0.05, 0.1, 1, 0, np.pi/6, 0])
+u0 = np.array([1, 0, 0, 0, 3, 0])
 
 nX = 3*ndof+3*ng+2*ngamma+3*nN+2*nF
 x0 = np.zeros(nX)
@@ -121,6 +121,8 @@ gammaF0 = np.zeros(nF)
 gdotN0 = np.zeros(nN)
 
 gN_save = np.zeros((nN, ntime))
+minimizing_tau_save = np.zeros((2,ntime))
+minimizing_dv_save = np.zeros((2,ntime))
 
 def get_x_components(x):
     a = x[0:ndof]
@@ -261,12 +263,18 @@ def combine_contact_constraints(q,u,a):
 
     if np.size(tau) == 2:  # two local minima
         gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
-        gN[1], gNdot[1], gNddot[1], WN[1,:], gammaF[gammaF_lim[1,:]], gammadotF[gammaF_lim[1,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[1],dv[1],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
+        gN[1], gNdot[1], gNddot[1], WN[1,:], gammaF[gammaF_lim[1,:]], gammadotF[gammaF_lim[1,:]], WF[gammaF_lim[1,:],:] = get_contact_constraints(q,u,a,tau[1],dv[1],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
+        # saving values
+        minimizing_tau_save[:,iter] = tau 
+        minimizing_dv_save[:,iter] = dv
     elif np.size(tau) == 1:
         # This case is rare if the hoop is not initialized to a horizontal configuration
         gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
         gN[1] = 1   # >0, no contact, we don't worry about other values
-        # concern: nonsmooth jumps in contact functions
+        # saving values
+        minimizing_tau_save[0,iter] = tau 
+        minimizing_dv_save[0,iter] = dv
+        # CONCERN: nonsmooth jumps in contact functions
     else:
         # raise error
         # this error might be raised when the hoop is horizontal and centered at the hip, in which case there is no contact between hoop and hip and code proceeds normally
@@ -306,8 +314,8 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
     M = np.diag(Mdiag)
 
     # Vector of applied forces and moments
-    # f = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
-    f = np.array([0, 0, 0, 0, 0, 0])
+    f = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
+    # f = np.array([0, 0, 0, 0, 0, 0])
 
     # Constraints and constraint gradients
     # initializing constraints
@@ -503,5 +511,10 @@ scipy.io.savemat(file_name_gN,dict(gN=gN_save))
 
 file_name_xbar_hip = str(f'{output_path}/xbar_hip.mat')
 scipy.io.savemat(file_name_xbar_hip,dict(xbar_hip=xbar_hip))
+
+file_name_tau = str(f'{output_path}/tau.mat')
+file_name_dv = str(f'{output_path}/dv.mat')
+scipy.io.savemat(file_name_tau,dict(tau=minimizing_tau_save))
+scipy.io.savemat(file_name_dv,dict(dv=minimizing_dv_save))
 
 print('done')

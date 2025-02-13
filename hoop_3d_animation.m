@@ -6,12 +6,12 @@ load("xbar_hip.mat")
 
 figure()
 hold on
+view(0,30)
+% view(1)
+% axis equal
 xlim([-2, 2])
 ylim([-2, 2])
 zlim([-2, 2])
-% view(45, 45)
-view(2)
-axis equal
 box on
 
 % Fixed basis
@@ -19,7 +19,7 @@ E1 = [1;0;0];
 E2 = [0;1;0];
 E3 = [0;0;1];
 
-animation = VideoWriter('3D_hoop3_top.avi');
+animation = VideoWriter('3D_hoop3_debug.avi');
 animation.FrameRate = 100;
 open(animation);
 
@@ -32,13 +32,14 @@ z = linspace(-1.5,1.5,100);
 r = 0.2*ones(100,1);
 hold on
 
-for i = 1:length(q)
+for i = 1:90%length(q)
 
+    
+    view(0,30)
+    % view(1)
     xlim([-2, 2])
     ylim([-2, 2])
     zlim([-2, 2])
-    % view(30,10)
-    view(2)
 
     x1 = q(i,1);
     x2 = q(i,2);
