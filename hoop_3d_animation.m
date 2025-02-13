@@ -3,6 +3,11 @@ load("q.mat")
 
 % loading the coordinates of the center of the hip
 load("xbar_hip.mat")
+xbar_hip = xbar_hip';
+
+% loading the minizing values of tau and dv
+load("tau.mat")
+load("dv.mat")
 
 figure()
 hold on
@@ -19,23 +24,24 @@ E1 = [1;0;0];
 E2 = [0;1;0];
 E3 = [0;0;1];
 
-animation = VideoWriter('3D_hoop3_debug.avi');
-animation.FrameRate = 100;
+animation = VideoWriter('3D_hoop3_contacts_check.avi');
+animation.FrameRate = 10;
 open(animation);
 
 ang_arr = linspace(0,2*pi,100);
 R_hoop = 0.5;
+R_hip = 0.2;
 
 % plot the cone
 z = linspace(-1.5,1.5,100);
 % r = 0.5-0.4*z;
-r = 0.2*ones(100,1);
+r = R_hip*ones(100,1);
 hold on
 
-for i = 1:90%length(q)
+for i = 1:length(q)
 
     
-    view(0,30)
+    % view(0,30)
     % view(1)
     xlim([-2, 2])
     ylim([-2, 2])
@@ -86,16 +92,27 @@ for i = 1:90%length(q)
 
     % plotting the hip
     for j = 1:2:length(ang_arr)
-        hip(j) = plot3(xbar_hip(i,1)+r*cos(ang_arr(j)),xbar_hip(i,2)+r*sin(ang_arr(j)),z,'k');
+        hip(j) = plot3(xbar_hip(1,i)+r*cos(ang_arr(j)),xbar_hip(2,i)+r*sin(ang_arr(j)),z,'k');
     end
 
-    [circle_hip, center_hip, angle_hip] = plot_circle(0.2, [xbar_hip(i,1), xbar_hip(i,2)], 0, 'k');
+    [circle_hip, center_hip, angle_hip] = plot_circle(0.2, [xbar_hip(1,i), xbar_hip(2,i)], 0, 'k');
 
     % plotting the hoop
     circle = plot3(x1+R_hoop*cos(ang_arr)*e1(1)+R_hoop*sin(ang_arr)*e2(1), ...
         x2+R_hoop*cos(ang_arr)*e1(2)+R_hoop*sin(ang_arr)*e2(2), ...
         x3+R_hoop*cos(ang_arr)*e1(3)+R_hoop*sin(ang_arr)*e2(3), ...
         'color','b','LineWidth',2);
+
+    % draw the minimzing points on hoop and hip
+    for j = 1:2
+        u = cos(tau(j,i))*e1+sin(tau(j,i));
+        xM = [x1; x2; x3]+R_hoop*u;
+        temp = xM-xM(3)*E3-xbar_hip(:,i);
+        v = (temp)/norm(temp);
+        xP = xbar_hip(:,i)+xM(3)*E3+R_hip*v;
+        min_hoop(j) = plot3(xM(1),xM(2),xM(3),'*','Color','r','LineWidth',2);
+        min_hip(j) = plot3(xP(1),xP(2),xP(3),'*','Color','r','LineWidth',2);
+    end
 
     drawnow
     writeVideo(animation, getframe(gcf))
@@ -112,13 +129,18 @@ for i = 1:90%length(q)
     delete(circle_hip)
     delete(angle_hip)
 
+    delete(min_hoop)
+    delete(min_hip)
+
 end
 
 close(animation)
 
 load('gN.mat')
 figure()
-plot(gN)
+plot(gN(1,:))
+hold on
+plot(gN(2,:))
 
 figure()
 subplot(1,3,1)
