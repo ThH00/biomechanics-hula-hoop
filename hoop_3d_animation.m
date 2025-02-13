@@ -105,7 +105,7 @@ for i = 1:length(q)
 
     % draw the minimzing points on hoop and hip
     for j = 1:2
-        u = cos(tau(j,i))*e1+sin(tau(j,i));
+        u = cos(tau(j,i))*e1+sin(tau(j,i))*e2;
         xM = [x1; x2; x3]+R_hoop*u;
         temp = xM-xM(3)*E3-xbar_hip(:,i);
         v = (temp)/norm(temp);

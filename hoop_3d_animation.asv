@@ -24,7 +24,7 @@ E1 = [1;0;0];
 E2 = [0;1;0];
 E3 = [0;0;1];
 
-animation = VideoWriter('3D_hoop3_debug.avi');
+animation = VideoWriter('3D_hoop3_contacts_check.avi');
 animation.FrameRate = 10;
 open(animation);
 
@@ -105,11 +105,11 @@ for i = 1:length(q)
 
     % draw the minimzing points on hoop and hip
     for j = 1:2
-        u = cos(tau(j,i))*e1+sin(tau(j,i));
-        xM = [x1; x2; x3]+u;
-        temp = xM-dv(j,i)*E3-xbar_hip(:,i);
+        u = cos(tau(j,i))*e1+sin(tau(j,i))*;
+        xM = [x1; x2; x3]+R_hoop*u;
+        temp = xM-xM(3)*E3-xbar_hip(:,i);
         v = (temp)/norm(temp);
-        xP = xbar_hip(:,i)+dv(j,i)*E3+R_hip*v;
+        xP = xbar_hip(:,i)+xM(3)*E3+R_hip*v;
         min_hoop(j) = plot3(xM(1),xM(2),xM(3),'*','Color','r','LineWidth',2);
         min_hip(j) = plot3(xP(1),xP(2),xP(3),'*','Color','r','LineWidth',2);
     end
@@ -138,9 +138,9 @@ close(animation)
 
 load('gN.mat')
 figure()
-plot(gN(i,:))
+plot(gN(1,:))
 hold on
-plot(gN)
+plot(gN(2,:))
 
 figure()
 subplot(1,3,1)

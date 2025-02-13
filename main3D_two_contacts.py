@@ -122,7 +122,6 @@ gdotN0 = np.zeros(nN)
 
 gN_save = np.zeros((nN, ntime))
 minimizing_tau_save = np.zeros((2,ntime))
-minimizing_dv_save = np.zeros((2,ntime))
 
 def get_x_components(x):
     a = x[0:ndof]
@@ -181,12 +180,10 @@ def get_minimizing_tau(q, xbar_hip):
     min_indices = argrelextrema(dh, np.less)[0]
     # Find the minizing value of tau
     minimizing_tau = tau[min_indices]
-    # Find the minimizing value of dv
-    minimizing_dv = dv[min_indices]
 
-    return minimizing_tau, minimizing_dv
+    return minimizing_tau
 
-def get_contact_constraints(q,u,a,tau,dv,xbar_hip,vbar_hip,abar_hip):
+def get_contact_constraints(q,u,a,tau,xbar_hip,vbar_hip,abar_hip):
     # gets gap distance, slip speed functions and their gradients and derivatives at each contact
     
     # center of hoop
@@ -247,7 +244,7 @@ def combine_contact_constraints(q,u,a):
     # combine all gap distance, slip speed functions and the gradients and derivatives from both contacts
 
     # get the minimizing values
-    tau, dv = get_minimizing_tau(q,xbar_hip[iter,:])
+    tau = get_minimizing_tau(q,xbar_hip[iter,:])
     
     # Contact constraints and constraint gradients
     # initializing constraints
@@ -262,18 +259,16 @@ def combine_contact_constraints(q,u,a):
     WF = np.zeros((nF, ndof))
 
     if np.size(tau) == 2:  # two local minima
-        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
-        gN[1], gNdot[1], gNddot[1], WN[1,:], gammaF[gammaF_lim[1,:]], gammadotF[gammaF_lim[1,:]], WF[gammaF_lim[1,:],:] = get_contact_constraints(q,u,a,tau[1],dv[1],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
+        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
+        gN[1], gNdot[1], gNddot[1], WN[1,:], gammaF[gammaF_lim[1,:]], gammadotF[gammaF_lim[1,:]], WF[gammaF_lim[1,:],:] = get_contact_constraints(q,u,a,tau[1],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
         # saving values
         minimizing_tau_save[:,iter] = tau 
-        minimizing_dv_save[:,iter] = dv
     elif np.size(tau) == 1:
         # This case is rare if the hoop is not initialized to a horizontal configuration
-        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],dv[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
+        gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
         gN[1] = 1   # >0, no contact, we don't worry about other values
         # saving values
-        minimizing_tau_save[0,iter] = tau 
-        minimizing_dv_save[0,iter] = dv
+        minimizing_tau_save[0,iter] = tau
         # CONCERN: nonsmooth jumps in contact functions
     else:
         # raise error
@@ -513,8 +508,6 @@ file_name_xbar_hip = str(f'{output_path}/xbar_hip.mat')
 scipy.io.savemat(file_name_xbar_hip,dict(xbar_hip=xbar_hip))
 
 file_name_tau = str(f'{output_path}/tau.mat')
-file_name_dv = str(f'{output_path}/dv.mat')
 scipy.io.savemat(file_name_tau,dict(tau=minimizing_tau_save))
-scipy.io.savemat(file_name_dv,dict(dv=minimizing_dv_save))
 
 print('done')
