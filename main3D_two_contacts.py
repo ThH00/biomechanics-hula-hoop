@@ -21,7 +21,7 @@ E3 = np.array([0,0,1])
 
 ## Simulation parameters
 ti = 0              # s, initial time
-ntime = 100        # dimensionless, number of iterations
+ntime = 200        # dimensionless, number of iterations
 dtime = 2e-3        # s, time step duration
 t_arr = np.arange(0, ntime*dtime, dtime)
 
@@ -63,7 +63,7 @@ It = 0.5*m*R_hoop**2    # kg.m^2, rotational inertia of hoop about diameter
 Ia = m*R_hoop**2        # kg.m^2, rotational inertia of hoop about axis passing through center perp to hoop plane
 
 # restitution coefficients
-eN = 0.5                # dimensionless, normal impact restitution coefficient
+eN = 0                # dimensionless, normal impact restitution coefficient
 eF = 0                  # dimensionless, tangential impact restitution coefficient
 
 # friction coefficients

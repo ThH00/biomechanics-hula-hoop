@@ -7,7 +7,6 @@ xbar_hip = xbar_hip';
 
 % loading the minizing values of tau and dv
 load("tau.mat")
-load("dv.mat")
 
 figure()
 hold on
@@ -105,11 +104,12 @@ for i = 1:length(q)
 
     % draw the minimzing points on hoop and hip
     for j = 1:2
-        u = cos(tau(j,i))*e1+sin(tau(j,i))*;
+        u = cos(tau(j,i))*e1+sin(tau(j,i))*e2;
         xM = [x1; x2; x3]+R_hoop*u;
-        temp = xM-xM(3)*E3-xbar_hip(:,i);
+        dv = xM(3)
+        temp = xM-dv*E3-xbar_hip(:,i);
         v = (temp)/norm(temp);
-        xP = xbar_hip(:,i)+xM(3)*E3+R_hip*v;
+        xP = xbar_hip(:,i)+dv*E3+R_hip*v;
         min_hoop(j) = plot3(xM(1),xM(2),xM(3),'*','Color','r','LineWidth',2);
         min_hip(j) = plot3(xP(1),xP(2),xP(3),'*','Color','r','LineWidth',2);
     end
