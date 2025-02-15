@@ -21,34 +21,34 @@ E3 = np.array([0,0,1])
 
 ## Simulation parameters
 ti = 0              # s, initial time
-ntime = 200        # dimensionless, number of iterations
+ntime = 2000        # dimensionless, number of iterations
 dtime = 2e-3        # s, time step duration
 t_arr = np.arange(0, ntime*dtime, dtime)
 
 ## Hip axis properties
-
-# # The hip center is tracing an ellipse
-# # Position of the bottom center of hip (bottom of hip axis)
-# x1bar_hip = 0.2*np.cos(5*t_arr)
-# x2bar_hip = 0.6*np.sin(5*t_arr)
-# xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
-# # velocity of the bottom center of hip
-# v1bar_hip = -0.2*5*np.sin(5*t_arr)
-# v2bar_hip = 0.6*5*np.cos(5*t_arr)
-# vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
-# # acceleration of the bottom center of hip
-# a1bar_hip = -0.2*25*np.cos(5*t_arr)
-# a2bar_hip = -0.6*25*np.sin(5*t_arr)
-# abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
-
-# The hip center is fixed
 R_hip = 0.2
-# Position of the bottom center of hip (bottom of hip aixs)
-xbar_hip = np.zeros((ntime,3))
+
+# The hip center is tracing an ellipse
+# Position of the bottom center of hip (bottom of hip axis)
+x1bar_hip = 0.2*np.cos(5*t_arr)
+x2bar_hip = 0.6*np.sin(5*t_arr)
+xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
 # velocity of the bottom center of hip
-vbar_hip = np.zeros((ntime,3))
+v1bar_hip = -0.2*5*np.sin(5*t_arr)
+v2bar_hip = 0.6*5*np.cos(5*t_arr)
+vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
 # acceleration of the bottom center of hip
-abar_hip = np.zeros((ntime,3))
+a1bar_hip = -0.2*25*np.cos(5*t_arr)
+a2bar_hip = -0.6*25*np.sin(5*t_arr)
+abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+
+# # The hip center is fixed
+# # Position of the bottom center of hip (bottom of hip aixs)
+# xbar_hip = np.zeros((ntime,3))
+# # velocity of the bottom center of hip
+# vbar_hip = np.zeros((ntime,3))
+# # acceleration of the bottom center of hip
+# abar_hip = np.zeros((ntime,3))
 
 # Angular velocity and angular acceleration of hip
 # omega_hip = np.array([0,0,1])   # angular velocity of hip
