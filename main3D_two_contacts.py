@@ -268,7 +268,7 @@ def combine_contact_constraints(q,u,a):
         gN[0], gNdot[0], gNddot[0], WN[0,:], gammaF[gammaF_lim[0,:]], gammadotF[gammaF_lim[0,:]], WF[gammaF_lim[0,:],:] = get_contact_constraints(q,u,a,tau[0],xbar_hip[iter,:],vbar_hip[iter,:],abar_hip[iter,:])
         gN[1] = 1   # >0, no contact, we don't worry about other values
         # saving values
-        minimizing_tau_save[0,iter] = tau
+        minimizing_tau_save[0,iter] = tau.item()
         # CONCERN: nonsmooth jumps in contact functions
     else:
         # raise error
