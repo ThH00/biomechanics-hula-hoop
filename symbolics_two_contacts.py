@@ -5,7 +5,6 @@ import numpy as np
 # hip has no angular velocity
 
 dh = sp.symbols('dh')       # horizontal distance from hoop base center to minimizing point
-# dv = sp.symbols('dv')       # vertical distance from hoop base center to minimizing point
 tau = sp.symbols('tau')
 
 # radius of hoop

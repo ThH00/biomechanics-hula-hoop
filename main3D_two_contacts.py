@@ -2,14 +2,21 @@
 
 ## Importing packages
 import numpy as np
-from scipy.optimize import minimize
 import sympy as sp
 from scipy.signal import argrelextrema
+import scipy.io
 
 # Define a custom error
 class NoLocalMinima(Exception):
     def __init__(self, message="The distance between the hoop and the hip has less then 1 or more than 2 local minima."):
         super().__init__(message)
+
+class MaxNewtonIterAttainedError(Exception):
+    """This exception is raised when the maximum number of Newton iterations is attained
+      whilst the iterations have not yet converged and the solution was not yet obtained."""
+    def __init__(self, message="This exception is raised when the maximum number of Newton iterations is attained."):
+        self.message = message
+        super().__init__(self.message)
 
 ## Problem constants
 gr = 9.81           # m/s^2, gravitational acceleration
@@ -83,7 +90,7 @@ beta = 0.25*(0.5+gama)**2
 r = 0.3
 
 # loop parameters
-maxiter_n = 100
+maxiter_n = 20
 tol_n = 1.0e-6
 
 ## Kinetic quantites
@@ -121,7 +128,40 @@ gammaF0 = np.zeros(nF)
 gdotN0 = np.zeros(nN)
 
 gN_save = np.zeros((nN, ntime))
+x_save = np.zeros((3*ndof+3*ng+2*ngamma+3*nN+2*nF, ntime))
 minimizing_tau_save = np.zeros((2,ntime))
+
+output_path = '/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop'
+def save_arrays():
+    
+    # file_name_J = str(f'{output_path}/J.mat')
+    # scipy.io.savemat(file_name_J,dict(J=J))
+
+    file_name_q = str(f'{output_path}/q.mat')
+    file_name_u = str(f'{output_path}/u.mat')
+    scipy.io.savemat(file_name_q,dict(q=q))
+    scipy.io.savemat(file_name_u,dict(u=u))
+
+    file_name_x_save = str(f'{output_path}/x_save.mat')
+    scipy.io.savemat(file_name_x_save,dict(x=x_save))
+
+    file_name_gN = str(f'{output_path}/gN.mat')
+    scipy.io.savemat(file_name_gN,dict(gN=gN_save))
+
+    file_name_xbar_hip = str(f'{output_path}/xbar_hip.mat')
+    scipy.io.savemat(file_name_xbar_hip,dict(xbar_hip=xbar_hip))
+
+    file_name_tau = str(f'{output_path}/tau.mat')
+    scipy.io.savemat(file_name_tau,dict(tau=minimizing_tau_save))
+
+    # np.save(f'{output_path}/q_save.npy', q_save)
+    # np.save(f'{output_path}/u_save.npy', u_save)
+    # np.save(f'{output_path}/X_save.npy', X_save)
+    # np.save(f'{output_path}/gNdot_save.npy', gNdot_save)
+    # np.save(f'{output_path}/gammaF_save.npy', gammaF_save)
+    # np.save(f'{output_path}/AV_save.npy', AV_save)
+
+    return
 
 def get_x_components(x):
     a = x[0:ndof]
@@ -159,8 +199,7 @@ def get_minimizing_tau(q, xbar_hip):
     e2 = np.transpose(R3@R2@R1)@E2
 
     # Create an array of possible tau values (step size < algorithm tolerance)
-    n_tau = int(1/tol_n)
-    tau = np.linspace(0, 2*np.pi, num=n_tau, endpoint=False)
+    tau = np.linspace(0, 2*np.pi, num=n_tau, endpoint=True)
     # I can find intervals containing the minima and then refine the discretization in these intervals (or use the bisection method)
 
     # Creating array of hoop points
@@ -174,6 +213,14 @@ def get_minimizing_tau(q, xbar_hip):
     temp = xM-dv[:, np.newaxis]*E3-xbar_hip
     # Compute the norm of each row
     dh = np.linalg.norm(temp, axis=1)
+
+    # dv = np.zeros((n_tau,1))
+    # dh = np.zeros((n_tau,1))
+    # for i in range(n_tau):
+    #     dv[i] = np.dot(xM[i,:],E3)
+    #     temp = xM[i,:]-dv[i]*E3-xbar_hip
+    #     # Compute the norm of each row
+    #     dh[i] = np.linalg.norm(temp)
 
     # Find the minimizers of dh
     # Find local minima (less than neighbors)
@@ -279,7 +326,7 @@ def combine_contact_constraints(q,u,a):
 
 
 def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_sets):
-    global iter
+    # global iter
 
     # data extraction
     prev_a, _, _, _, _, _, _, _, _, _, prev_lambdaN, _, prev_lambdaF = \
@@ -447,23 +494,20 @@ u[0,:] = u0
 gammaF[0,:] = gammaF0
 gdotN[0,:] = gdotN0
 
-for iter in range(1,ntime):
-    print(f'i={iter}')
-
-    # First semismooth Newton calculation
-    t = dtime*iter
+def update(prev_x,prev_AV):
     nu = 0
-
+    
+    x_temp = prev_x
     Res,AV_temp,gdot_N_temp,gammaF_temp,q_temp,u_temp,J\
          = get_R_J(x_temp,prev_x,prev_AV,gammaF[iter-1,:],gdotN[iter-1,:],
                    q[iter-1,:],u[iter-1,:])
     
     norm_R = np.linalg.norm(Res,np.inf)
-    # print(f'lambda_N = {x_temp[3*ndof+3*ng+2*ngamma+2*nN:3*ndof+3*ng+2*ngamma+3*nN]}')
-    # print(f'lambda_g = {x_temp[3*ndof+2*ng:3*ndof+3*ng]}')
 
     # Semismooth Newton iterations
     while norm_R>tol_n and nu<maxiter_n:
+        global n_tau
+
         # Newton update
         x_temp = x_temp-np.linalg.solve(J,Res)
         # Calculate new EOM and residual
@@ -476,12 +520,17 @@ for iter in range(1,ntime):
 
         if nu == maxiter_n:
             print(f'Maximum number of Newton iterations is exceeded at iterations {iter}')
-        # print(f'norm_R = {norm_R}')
-        # print(f'lambda_N = {x_temp[3*ndof+3*ng+2*ngamma+2*nN:3*ndof+3*ng+2*ngamma+3*nN]}')
-        # print(f'lambda_g = {x_temp[3*ndof+2*ng:3*ndof+3*ng]}')
+            if n_tau*tol_n < 1001:
+                n_tau = n_tau*10
+                prev_x, prev_AV = update(prev_x,prev_AV)
+            else:
+                raise MaxNewtonIterAttainedError()
+                # here, I need to check if there is no convergence because of changing contact regions
+                # currently I am assuming that the code is not converging because the tau array is not refined enough
+                # SHOULD I PUT SOMETHING TO BREAK OUT OF FUNCTION HERE?
     
-    R_array[iter] = norm_R
-        
+        R_array[iter] = norm_R
+            
     # Updating reusable results
     gammaF[iter,:] = gammaF_temp
     gdotN[iter,:] = gdot_N_temp
@@ -489,25 +538,27 @@ for iter in range(1,ntime):
     u[iter,:] = u_temp
     prev_x = x_temp
     prev_AV = AV_temp 
+    
+    return x_temp, AV_temp
 
-import scipy.io
+x_save[:,0] = prev_x
+for iter in range(1,ntime):
+    print(f'i={iter}')
 
-output_path = '/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop'
-file_name_J = str(f'{output_path}/J.mat')
-scipy.io.savemat(file_name_J,dict(J=J))
+    # First semismooth Newton calculation
+    t = dtime*iter
+    n_tau = int(1/tol_n)
+    try:
+        prev_x, prev_AV = update(prev_x,prev_AV)
+        x_save[:,iter-1] = prev_x
+        if iter%10 ==0:
+            save_arrays()
+    finally:
+        save_arrays()
+        
 
-file_name_q = str(f'{output_path}/q.mat')
-file_name_u = str(f'{output_path}/u.mat')
-scipy.io.savemat(file_name_q,dict(q=q))
-scipy.io.savemat(file_name_u,dict(u=u))
+        
 
-file_name_gN = str(f'{output_path}/gN.mat')
-scipy.io.savemat(file_name_gN,dict(gN=gN_save))
 
-file_name_xbar_hip = str(f'{output_path}/xbar_hip.mat')
-scipy.io.savemat(file_name_xbar_hip,dict(xbar_hip=xbar_hip))
-
-file_name_tau = str(f'{output_path}/tau.mat')
-scipy.io.savemat(file_name_tau,dict(tau=minimizing_tau_save))
 
 print('done')
