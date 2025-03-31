@@ -32,7 +32,7 @@ R_hoop = 0.5;
 R_hip = 0.2;
 
 % plot the cone
-z = linspace(-1.5,1.5,100);
+z = linspace(-1.5C,1.5,100);
 % r = 0.5-0.4*z;
 r = R_hip*ones(100,1);
 hold on
