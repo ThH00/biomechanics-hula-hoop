@@ -497,7 +497,7 @@ gdotN[0,:] = gdotN0
 def update(prev_x,prev_AV, x_guess=prev_x, AV_guess=prev_AV):
     nu = 0
     
-    x_temp = prev_x
+    x_temp = x_guess
     Res,AV_temp,gdot_N_temp,gammaF_temp,q_temp,u_temp,J\
          = get_R_J(x_temp,prev_x,prev_AV,gammaF[iter-1,:],gdotN[iter-1,:],
                    q[iter-1,:],u[iter-1,:])
@@ -522,7 +522,7 @@ def update(prev_x,prev_AV, x_guess=prev_x, AV_guess=prev_AV):
             print(f'Maximum number of Newton iterations is exceeded at iterations {iter}')
             if n_tau*tol_n < 1001:
                 n_tau = n_tau*10
-                prev_x, prev_AV = update(prev_x,prev_AV)
+                prev_x, prev_AV = update(prev_x,prev_AV,x_temp,AV_temp)
             else:
                 raise MaxNewtonIterAttainedError()
                 # here, I need to check if there is no convergence because of changing contact regions
