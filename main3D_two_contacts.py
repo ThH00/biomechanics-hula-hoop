@@ -408,12 +408,12 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
             # check for contact if blocks are not horizontally detached
             if r*gN[i] - Kappa_hatN[i] <=0:
                 A[i] = 1
-                if np.abs(r*ksiF[i]-PF[i])<=mu_s*(PN[i]):
+                if np.linalg.norm(r*ksiF[gammaF_lim[i,:]]-PF[gammaF_lim[i,:]])<=mu_s*(PN[i]):
                     # D-stick
-                    D[i] = 1
-                    if np.abs(r*gammadotF[i]-lambdaF[i])<=mu_s*(lambdaN[i]):
+                    D[gammaF_lim[i,:]] = [1,1]
+                    if np.linalg.norm(r*gammadotF[gammaF_lim[i,:]]-lambdaF[gammaF_lim[i,:]])<=mu_s*(lambdaN[i]):
                         # E-stick
-                        E[i] = 1
+                        E[gammaF_lim[i,:]] = [1,1]
                 if r*ksiN[i]-PN[i] <= 0:
                     B[i] = 1
                     if r*gNddot[i]-lambdaN[i] <= 0:
@@ -494,7 +494,7 @@ u[0,:] = u0
 gammaF[0,:] = gammaF0
 gdotN[0,:] = gdotN0
 
-def update(prev_x,prev_AV):
+def update(prev_x,prev_AV, x_guess=prev_x, AV_guess=prev_AV):
     nu = 0
     
     x_temp = prev_x
