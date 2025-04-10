@@ -6,6 +6,8 @@ import numpy as np
 
 dh = sp.symbols('dh')       # horizontal distance from hoop base center to minimizing point
 tau = sp.symbols('tau')
+dtau_dt = sp.symbols('dtau_dt')   # time derivative of tau
+d2tau_dt2 = sp.symbols('d2tau_dt2')   # second time derivative of tau
 
 # radius of hoop
 R_hoop = sp.symbols('R_hoop')
@@ -55,9 +57,9 @@ omega_hoop = psidot*E3+thetadot*e1p+phidot*e3
 
 # Define the array of variables that are a function of time
 # NOTE: I will just take derivative with respect vars, not tau
-vars = np.array([xbar_hoop[0], xbar_hoop[1], xbar_hoop[2], psi, theta, phi, xbar_hip[0], xbar_hip[1], xbar_hip[2]])
-varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot, thetadot, phidot, vbar_hip[0], vbar_hip[1], vbar_hip[2]])
-varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot, thetaddot, phiddot, abar_hip[0], abar_hip[1], abar_hip[2]])
+vars = np.array([xbar_hoop[0], xbar_hoop[1], xbar_hoop[2], psi, theta, phi, xbar_hip[0], xbar_hip[1], xbar_hip[2],tau])
+varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot, thetadot, phidot, vbar_hip[0], vbar_hip[1], vbar_hip[2], dtau_dt])
+varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot, thetaddot, phiddot, abar_hip[0], abar_hip[1], abar_hip[2], d2tau_dt2])
 n_vars = np.size(vars)
 
 ## Calculating the gap distance constraint, its derivative, and its gradient
@@ -203,7 +205,7 @@ WF2_5 = prep_for_numpy(str(WF2_5))
 
 
 # Open the file in append mode
-with open("output.txt", "a") as file:
+with open("output_tau_derivatives.txt", "a") as file:
     # Append the string to the file
     file.write(f'gN = {gN}\n')
     file.write(f'gNdot = {gNdot}\n')

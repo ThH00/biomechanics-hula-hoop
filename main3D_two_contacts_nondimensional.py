@@ -18,35 +18,39 @@ class MaxNewtonIterAttainedError(Exception):
         self.message = message
         super().__init__(self.message)
 
-## Problem constants
-gr = 9.81           # m/s^2, gravitational acceleration
 
-# fixed basis
-E1 = np.array([1,0,0])
-E2 = np.array([0,1,0])
-E3 = np.array([0,0,1])
+## Nondimensionalization parameters
+acceleration_nd_param = 9.81
+length_nd_param = 0.5
+time_nd_param = np.sqrt(length_nd_param/acceleration_nd_param)
+mass_nd_param = 1
+velocity_nd_param = length_nd_param/time_nd_param
+
+## Problem constants
+gr = 9.81/acceleration_nd_param           # m/s^2, gravitational acceleration
 
 ## Simulation parameters
-ti = 0              # s, initial time
-ntime = 2000        # dimensionless, number of iterations
-dtime = 5e-4        # s, time step duration
+ti = 0/time_nd_param              # initial time
+tf = 1/time_nd_param              # final time
+dtime = 1e-3/time_nd_param          # time step duration
+ntime = int(np.ceil((tf-ti)/dtime))        # number of iterations
 t_arr = np.arange(0, ntime*dtime, dtime)
 
 ## Hip axis properties
-R_hip = 0.2
+R_hip = 0.2/length_nd_param
 
 # The hip center is tracing an ellipse
 # Position of the bottom center of hip (bottom of hip axis)
-x1bar_hip = 0.2*np.cos(5*t_arr)
-x2bar_hip = 0.6*np.sin(5*t_arr)
+x1bar_hip = 0.2*np.cos(5*t_arr)/length_nd_param
+x2bar_hip = 0.6*np.sin(5*t_arr)/length_nd_param
 xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
 # velocity of the bottom center of hip
-v1bar_hip = -0.2*5*np.sin(5*t_arr)
-v2bar_hip = 0.6*5*np.cos(5*t_arr)
+v1bar_hip = -0.2*5*np.sin(5*t_arr)/velocity_nd_param
+v2bar_hip = 0.6*5*np.cos(5*t_arr)/velocity_nd_param
 vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
 # acceleration of the bottom center of hip
-a1bar_hip = -0.2*25*np.cos(5*t_arr)
-a2bar_hip = -0.6*25*np.sin(5*t_arr)
+a1bar_hip = -0.2*25*np.cos(5*t_arr)/acceleration_nd_param
+a2bar_hip = -0.6*25*np.sin(5*t_arr)/acceleration_nd_param
 abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
 
 # # The hip center is fixed
@@ -64,10 +68,15 @@ alpha_hip = np.array([0,0,0])   # angular acceleration of hip
 
 # hoop properties
 ndof = 6                # number of degrees of freedom
-R_hoop = 0.5            # m, radius of hoop
-m = 0.2                 # kg, mass of hoop
+R_hoop = 0.5/length_nd_param            # m, radius of hoop
+m = 0.2/mass_nd_param                 # kg, mass of hoop
 It = 0.5*m*R_hoop**2    # kg.m^2, rotational inertia of hoop about diameter
 Ia = m*R_hoop**2        # kg.m^2, rotational inertia of hoop about axis passing through center perp to hoop plane
+
+# fixed basis
+E1 = np.array([1,0,0])
+E2 = np.array([0,1,0])
+E3 = np.array([0,0,1])
 
 # restitution coefficients
 eN = 0                # dimensionless, normal impact restitution coefficient
@@ -111,8 +120,8 @@ q = np.zeros((ntime,ndof))
 u = np.zeros((ntime,ndof))
 
 # initial values
-q0 = np.array([0.05, 0.1, 1, 0, np.pi/6, 0])
-u0 = np.array([1, 0, 0, 0, 3, 0])
+q0 = np.array([0.05/length_nd_param, 0.1/length_nd_param, 1/length_nd_param, 0, np.pi/6, 0])
+u0 = np.array([1/velocity_nd_param, 0, 0, 0, 3/time_nd_param, 0])
 
 nX = 3*ndof+3*ng+2*ngamma+3*nN+2*nF
 x0 = np.zeros(nX)
@@ -462,12 +471,12 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
         norm_R = np.linalg.norm(Res,np.inf)
         print(f'norm_R = {norm_R}')
         print(f'gN = [{gN[0]}, {gN[1]}]')
-        gN_save[:,iter] = gN
         print(f'A = {A}')
         print(f'B = {B}')
         print(f'C = {C}')
         print(f'D = {D}')
         print(f'E = {E}')
+        gN_save[:,iter] = gN
         return Res, AV, gNdot, gammaF, q, u, A, B, C, D, E
     else:
         return Res, AV, gNdot, gammaF, q, u
