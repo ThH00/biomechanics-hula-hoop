@@ -29,7 +29,7 @@ E3 = np.array([0,0,1])
 ## Simulation parameters
 ti = 0              # s, initial time
 ntime = 2000        # dimensionless, number of iterations
-dtime = 5e-4        # s, time step duration
+dtime = 2e-3        # s, time step duration
 t_arr = np.arange(0, ntime*dtime, dtime)
 
 ## Hip axis properties
@@ -37,17 +37,31 @@ R_hip = 0.2
 
 # The hip center is tracing an ellipse
 # Position of the bottom center of hip (bottom of hip axis)
-x1bar_hip = 0.2*np.cos(5*t_arr)
-x2bar_hip = 0.6*np.sin(5*t_arr)
+x1bar_hip = 1*np.ones(ntime)*(t_arr**2)/2
+x2bar_hip = np.zeros(ntime)+0.1
 xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
 # velocity of the bottom center of hip
-v1bar_hip = -0.2*5*np.sin(5*t_arr)
-v2bar_hip = 0.6*5*np.cos(5*t_arr)
+v1bar_hip = 1*np.ones(ntime)*t_arr
+v2bar_hip = np.zeros(ntime)
 vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
 # acceleration of the bottom center of hip
-a1bar_hip = -0.2*25*np.cos(5*t_arr)
-a2bar_hip = -0.6*25*np.sin(5*t_arr)
+a1bar_hip = 1*np.ones(ntime)
+a2bar_hip = np.zeros(ntime)
 abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+
+# # The hip center is tracing an ellipse
+# # Position of the bottom center of hip (bottom of hip axis)
+# x1bar_hip = 0.2*np.cos(5*t_arr)
+# x2bar_hip = 0.6*np.sin(5*t_arr)
+# xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
+# # velocity of the bottom center of hip
+# v1bar_hip = -0.2*5*np.sin(5*t_arr)
+# v2bar_hip = 0.6*5*np.cos(5*t_arr)
+# vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
+# # acceleration of the bottom center of hip
+# a1bar_hip = -0.2*25*np.cos(5*t_arr)
+# a2bar_hip = -0.6*25*np.sin(5*t_arr)
+# abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
 
 # # The hip center is fixed
 # # Position of the bottom center of hip (bottom of hip aixs)
@@ -59,7 +73,7 @@ abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
 
 # Angular velocity and angular acceleration of hip
 # omega_hip = np.array([0,0,1])   # angular velocity of hip
-omega_hip = np.array([0,0,0])   # angular velocity of hip
+omega_hip = np.array([0,0,1])   # angular velocity of hip
 alpha_hip = np.array([0,0,0])   # angular acceleration of hip
 
 # hoop properties
@@ -74,7 +88,7 @@ eN = 0                # dimensionless, normal impact restitution coefficient
 eF = 0                  # dimensionless, tangential impact restitution coefficient
 
 # friction coefficients
-mu_s = 0.8              # dimensionless, static friction coefficient
+mu_s = 0.4              # dimensionless, static friction coefficient
 mu_k = 0.2              # dimensionless, kinetic friction coefficient
 
 
@@ -105,14 +119,16 @@ gammaF_lim = np.array([[0,1],[2,3]])
 R_array = np.zeros(ntime)
 
 gammaF = np.zeros((ntime,nF))
-gdotN = np.zeros((ntime,nN))
+gNdot_save = np.zeros((ntime,nN))
 
 q = np.zeros((ntime,ndof))
 u = np.zeros((ntime,ndof))
 
 # initial values
-q0 = np.array([0.05, 0.1, 1, 0, np.pi/6, 0])
-u0 = np.array([1, 0, 0, 0, 3, 0])
+# q0 = np.array([0.05, 0.1, 1., 0., np.pi.6, 0.])
+# u0 = np.array([1, 0, 0, 0, 3, 0])
+q0 = np.array([0, 0, 1, 0, 0, 0])
+u0 = np.array([0, 0, 0, 0, 0, 1])
 
 nX = 3*ndof+3*ng+2*ngamma+3*nN+2*nF
 x0 = np.zeros(nX)
@@ -125,7 +141,7 @@ lambdaF_bar0 = np.zeros(nF)
 prev_AV = np.concatenate((a_bar0, lambdaN_bar0, lambdaF_bar0), axis=None)
 
 gammaF0 = np.zeros(nF)
-gdotN0 = np.zeros(nN)
+gNdot0 = np.zeros(nN)
 
 gN_save = np.zeros((nN, ntime))
 x_save = np.zeros((3*ndof+3*ng+2*ngamma+3*nN+2*nF, ntime))
@@ -230,9 +246,14 @@ def get_minimizing_tau(q, xbar_hip):
 
     return minimizing_tau
 
+
+
+
 def get_contact_constraints(q,u,a,tau,xbar_hip,vbar_hip,abar_hip):
     # gets gap distance, slip speed functions and their gradients and derivatives at each contact
-    
+
+    # prev_gNdot = gNdot_save[iter-1,:]
+
     # center of hoop
     xbar_hoop = q[:3]
     vbar_hoop = u[:3]
@@ -254,6 +275,7 @@ def get_contact_constraints(q,u,a,tau,xbar_hip,vbar_hip,abar_hip):
     gN = -R_hip + (xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5
     gNdot = phidot*(1.0*R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.cos(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.sin(tau))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]) + 1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.cos(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.sin(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]))/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + psidot*(1.0*R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]) + 1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]))/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + thetadot*(1.0*R_hoop*(np.sin(phi)*np.sin(psi)*np.sin(theta)*np.cos(tau) + np.sin(psi)*np.sin(tau)*np.sin(theta)*np.cos(phi))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]) + 1.0*R_hoop*(-np.sin(phi)*np.sin(theta)*np.cos(psi)*np.cos(tau) - np.sin(tau)*np.sin(theta)*np.cos(phi)*np.cos(psi))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]))/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + vbar_hip[0]*(-1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) + 1.0*xbar_hip[0] - 1.0*xbar_hoop[0])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + vbar_hip[1]*(-1.0*R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + 1.0*xbar_hip[1] - 1.0*xbar_hoop[1])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + 1.0*vbar_hip[2]*xbar_hip[2]/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + vbar_hoop[0]*(1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - 1.0*xbar_hip[0] + 1.0*xbar_hoop[0])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + vbar_hoop[1]*(1.0*R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - 1.0*xbar_hip[1] + 1.0*xbar_hoop[1])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5
     gNddot = 1.0*R_hoop*phidot**2*(-R_hoop*(((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.cos(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.sin(tau))*(-R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]) + ((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.cos(tau) - (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.sin(tau))*(-R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]))**2/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.cos(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.sin(tau))**2 + R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.cos(tau) - (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.sin(tau))**2 - ((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1]) - ((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0]))/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**0.5) + 1.0*R_hoop*psidot**2*(-R_hoop*(((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))*(-R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]) - ((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau))*(-R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]))*(-((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0]) + ((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1]))/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))**2 + R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau))**2 - ((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1]) - ((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0]))/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**0.5) + 1.0*R_hoop*thetadot**2*(np.sin(phi)*np.cos(tau) + np.sin(tau)*np.cos(phi))*(-R_hoop*(-(-R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])*np.cos(psi) + (-R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])*np.sin(psi))*((R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])*np.cos(psi) - (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])*np.sin(psi))*(np.sin(phi)*np.cos(tau) + np.sin(tau)*np.cos(phi))*np.sin(theta)**2/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (R_hoop*(np.sin(phi)*np.cos(tau) + np.sin(tau)*np.cos(phi))*np.sin(psi)**2*np.sin(theta)**2 + R_hoop*(np.sin(phi)*np.cos(tau) + np.sin(tau)*np.cos(phi))*np.sin(theta)**2*np.cos(psi)**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])*np.cos(psi)*np.cos(theta) - (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])*np.sin(psi)*np.cos(theta))/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**0.5) + abar_hip[0]*(-1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) + 1.0*xbar_hip[0] - 1.0*xbar_hoop[0])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + abar_hip[1]*(-1.0*R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + 1.0*xbar_hip[1] - 1.0*xbar_hoop[1])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + 1.0*abar_hip[2]*xbar_hip[2]/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + abar_hoop[0]*(1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - 1.0*xbar_hip[0] + 1.0*xbar_hoop[0])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + abar_hoop[1]*(1.0*R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - 1.0*xbar_hip[1] + 1.0*xbar_hoop[1])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + phiddot*(1.0*R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.cos(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.sin(tau))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]) + 1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.cos(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.sin(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]))/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + psiddot*(1.0*R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.cos(psi)*np.cos(theta) - np.sin(psi)*np.cos(phi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]) + 1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]))/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + thetaddot*(1.0*R_hoop*(np.sin(phi)*np.sin(psi)*np.sin(theta)*np.cos(tau) + np.sin(psi)*np.sin(tau)*np.sin(theta)*np.cos(phi))*(R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0]) + 1.0*R_hoop*(-np.sin(phi)*np.sin(theta)*np.cos(psi)*np.cos(tau) - np.sin(tau)*np.sin(theta)*np.cos(phi)*np.cos(psi))*(R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1]))/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5 + 1.0*vbar_hip[0]**2*((-R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])*(R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**(-0.5)) + 1.0*vbar_hip[1]**2*((-R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])*(R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**(-0.5)) + 1.0*vbar_hip[2]**2*(-xbar_hip[2]**2/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**(-0.5)) + 1.0*vbar_hoop[0]**2*((-R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])*(R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**(-0.5)) + 1.0*vbar_hoop[1]**2*((-R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])*(R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])/(xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**1.5 + (xbar_hip[2]**2 + (R_hoop*((np.sin(phi)*np.sin(psi) - np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) - (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) + xbar_hip[1] - xbar_hoop[1])**2 + (R_hoop*((np.sin(phi)*np.cos(psi) + np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.sin(psi)*np.cos(theta) - np.cos(phi)*np.cos(psi))*np.cos(tau)) + xbar_hip[0] - xbar_hoop[0])**2)**(-0.5))
+    # gNddot = (gNdot-prev_gNdot)/dtime
 
     WN[0,0] = (1.0*R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - 1.0*xbar_hip[0] + 1.0*xbar_hoop[0])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5
     WN[0,1] = (1.0*R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - 1.0*xbar_hip[1] + 1.0*xbar_hoop[1])/(xbar_hip[2]**2 + (R_hoop*((-np.sin(phi)*np.sin(psi) + np.cos(phi)*np.cos(psi)*np.cos(theta))*np.sin(tau) + (np.sin(phi)*np.cos(psi)*np.cos(theta) + np.sin(psi)*np.cos(phi))*np.cos(tau)) - xbar_hip[1] + xbar_hoop[1])**2 + (R_hoop*((-np.sin(phi)*np.cos(psi) - np.sin(psi)*np.cos(phi)*np.cos(theta))*np.sin(tau) + (-np.sin(phi)*np.sin(psi)*np.cos(theta) + np.cos(phi)*np.cos(psi))*np.cos(tau)) - xbar_hip[0] + xbar_hoop[0])**2)**0.5
@@ -326,7 +348,7 @@ def combine_contact_constraints(q,u,a):
     return gN, gNdot, gNddot, WN, gammaF, gammadotF, WF
 
 
-def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_sets):
+def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gNdot, prev_q, prev_u, *index_sets):
     # global iter
 
     # data extraction
@@ -357,8 +379,8 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
     M = np.diag(Mdiag)
 
     # Vector of applied forces and moments
-    f = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
-    # f = np.array([0, 0, 0, 0, 0, 0])
+    # f = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
+    f = np.array([0, 0, 0, 0, 0, 0])
 
     # Constraints and constraint gradients
     # initializing constraints
@@ -372,11 +394,27 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
     Wg = np.zeros((ng, ndof))
     Wgamma = np.zeros((ngamma, ndof))
 
+    # g[0] = q[0]
+    # g[1] = q[1]
+    # g[2] = q[2]
+
+    # gdot[0] = u[0]
+    # gdot[1] = u[1]
+    # gdot[2] = u[2]
+
+    # gddot[0] = a[0]
+    # gddot[1] = a[1]
+    # gddot[2] = a[2]
+
+    # Wg[0,0] = 1
+    # Wg[1,1] = 1
+    # Wg[2,2] = 1
+
     gN, gNdot, gNddot, WN, gammaF, gammadotF, WF = combine_contact_constraints(q,u,a)
 
     # Kinetic quantities
     # normal
-    ksiN = gNdot+eN*prev_gdotN # (86)
+    ksiN = gNdot+eN*prev_gNdot # (86)
     PN = LambdaN+dtime*((1-gama)*prev_lambdaNbar+gama*lambdaNbar) # (95)
     Kappa_hatN = KappaN+dtime**2/2*((1-2*beta)*prev_lambdaNbar+2*beta*lambdaNbar) # (102)
     # frictional
@@ -472,12 +510,12 @@ def get_R(x, prev_x, prev_AV, prev_gammaF, prev_gdotN, prev_q, prev_u, *index_se
     else:
         return Res, AV, gNdot, gammaF, q, u
 
-def get_R_J(x,prev_x,prev_AV,prev_gammaF,prev_gdot_N,prev_q,prev_u):
+def get_R_J(x,prev_x,prev_AV,prev_gammaF,prev_gNdot,prev_q,prev_u):
     
     epsilon = 1e-6
     # add return of index sets here
-    R_x, AV, gdot_N, gammaF, q, u, A, B, C, D, E = get_R(x,prev_x,prev_AV,prev_gammaF,
-                                           prev_gdot_N,prev_q,prev_u)
+    R_x, AV, gNdot, gammaF, q, u, A, B, C, D, E = get_R(x,prev_x,prev_AV,prev_gammaF,
+                                           prev_gNdot,prev_q,prev_u)
     n = np.size(R_x) # Jacobian dimension
     # Initializing the Jacobian
     J = np.zeros((n,n))
@@ -486,10 +524,10 @@ def get_R_J(x,prev_x,prev_AV,prev_gammaF,prev_gdot_N,prev_q,prev_u):
     for i in range(n):
         # print(i)
         R_x_plus_epsilon,_,_,_,_,_ = get_R(x+epsilon*I[:,i],prev_x,prev_AV,
-                                           prev_gammaF,prev_gdot_N,prev_q,prev_u,A, B, C, D, E)
+                                           prev_gammaF,prev_gNdot,prev_q,prev_u,A, B, C, D, E)
         J[:,i] = (R_x_plus_epsilon-R_x)/epsilon
 
-    return R_x,AV,gdot_N,gammaF,q,u,J
+    return R_x,AV,gNdot,gammaF,q,u,J
 
 ## Solution
 x_temp = x0
@@ -498,7 +536,7 @@ prev_x = x0
 q[0,:] = q0
 u[0,:] = u0
 gammaF[0,:] = gammaF0
-gdotN[0,:] = gdotN0
+gNdot_save[0,:] = gNdot0
 
 def update(prev_x, prev_AV, x_guess=None):
 
@@ -508,8 +546,8 @@ def update(prev_x, prev_AV, x_guess=None):
     nu = 0
     
     x_temp = x_guess
-    Res,AV_temp,gdot_N_temp,gammaF_temp,q_temp,u_temp,J\
-         = get_R_J(x_temp,prev_x,prev_AV,gammaF[iter-1,:],gdotN[iter-1,:],
+    Res,AV_temp,gNdot_temp,gammaF_temp,q_temp,u_temp,J\
+         = get_R_J(x_temp,prev_x,prev_AV,gammaF[iter-1,:],gNdot_save[iter-1,:],
                    q[iter-1,:],u[iter-1,:])
     
     norm_R = np.linalg.norm(Res,np.inf)
@@ -523,8 +561,8 @@ def update(prev_x, prev_AV, x_guess=None):
         # Calculate new EOM and residual
         nu = nu+1
         print(f'nu = {nu}')
-        Res,AV_temp,gdot_N_temp,gammaF_temp,q_temp,u_temp,J = \
-            get_R_J(x_temp,prev_x,prev_AV,gammaF[iter-1,:],gdotN[iter-1,:],\
+        Res,AV_temp,gNdot_temp,gammaF_temp,q_temp,u_temp,J = \
+            get_R_J(x_temp,prev_x,prev_AV,gammaF[iter-1,:],gNdot_save[iter-1,:],\
                     q[iter-1,:],u[iter-1,:])
         norm_R = np.linalg.norm(Res,np.inf)
 
@@ -543,7 +581,7 @@ def update(prev_x, prev_AV, x_guess=None):
             
     # Updating reusable results
     gammaF[iter,:] = gammaF_temp
-    gdotN[iter,:] = gdot_N_temp
+    gNdot_save[iter,:] = gNdot_temp
     q[iter,:] = q_temp
     u[iter,:] = u_temp
     prev_x = x_temp

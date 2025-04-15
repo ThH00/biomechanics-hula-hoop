@@ -24,7 +24,7 @@ E2 = [0;1;0];
 E3 = [0;0;1];
 
 animation = VideoWriter('3D_hoop3_2contacts_moving_hip_3_3D.mp4', 'MPEG-4');
-animation.FrameRate = 10;
+aniemation.FrameRate = 10;
 open(animation);
 
 ang_arr = linspace(0,2*pi,100);
@@ -37,7 +37,7 @@ z = linspace(-1.5,1.5,100);
 r = R_hip*ones(100,1);
 hold on
 
-for i = 1:205 %length(q)
+for i = 1:length(q)
 
     
     % view(0,30)
@@ -117,7 +117,7 @@ for i = 1:205 %length(q)
     drawnow
     writeVideo(animation, getframe(gcf))
 
-    pause(0.001)
+    % pause(0.001)
 
     delete(center_plot)
     delete(e1_plot)

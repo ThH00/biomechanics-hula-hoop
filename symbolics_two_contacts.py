@@ -4,7 +4,7 @@ import numpy as np
 # assumptions
 # hip has no angular velocity
 
-dh = sp.symbols('dh')       # horizontal distance from hoop base center to minimizing point
+# dh = sp.symbols('dh')       # horizontal distance from hoop base center to minimizing point
 tau = sp.symbols('tau')
 
 # radius of hoop
@@ -53,11 +53,18 @@ e3 = np.transpose(R3@R2@R1)@E3
 
 omega_hoop = psidot*E3+thetadot*e1p+phidot*e3
 
+
+omega_hip  = sp.symbols('omega_hip:3')  # Creates omega_hip0, omega_hip1, omega_hip2
+alpha_hip = sp.symbols('alpha_hip:3')   # Creates alpha_hip0, alpha_hip1, alpha_hip2
+
+hip_ang_vel = np.array([omega_hip[0],omega_hip[1],omega_hip[2]])
+hip_ang_acc = np.array([alpha_hip[0],alpha_hip[1],alpha_hip[2]])
+
 # Define the array of variables that are a function of time
 # NOTE: I will just take derivative with respect vars, not tau
 vars = np.array([xbar_hoop[0], xbar_hoop[1], xbar_hoop[2], psi, theta, phi, xbar_hip[0], xbar_hip[1], xbar_hip[2]])
-varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot, thetadot, phidot, vbar_hip[0], vbar_hip[1], vbar_hip[2]])
-varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot, thetaddot, phiddot, abar_hip[0], abar_hip[1], abar_hip[2]])
+varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot, thetadot, phidot, vbar_hip[0], vbar_hip[1], vbar_hip[2]],omega_hip[0],omega_hip[1],omega_hip[2])
+varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot, thetaddot, phiddot, abar_hip[0], abar_hip[1], abar_hip[2]],alpha_hip[0],alpha_hip[1],alpha_hip[2])
 n_vars = np.size(vars)
 
 ## Calculating the gap distance constraint, its derivative, and its gradient
@@ -104,7 +111,7 @@ vM = vbar_hoop+np.cross(omega_hoop,R_hoop*u)
 
 # Motion of contact point on hip
 xP = xbar_hip+dv*E3+R_hip*v
-vP = vbar_hip
+vP = vbar_hip+np.cross(hip_ang_vel,dv*E3+R_hip*v)
 
 # Slip speeds
 gammaF1 = np.dot(vM-vP,t1)
@@ -116,7 +123,7 @@ grad_F2 = [sp.diff(gammaF2, xi) for xi in varsdot]
 # Calculating contact constraint derivative
 gammadotF1 = 0
 gammadotF2 = 0
-for i in range(n_vars):
+for i in range(n_vars+3):
     gammadotF1 += grad_F1[i]*varsddot[i]
     gammadotF2 += grad_F2[i]*varsddot[i]
 
@@ -164,6 +171,10 @@ def prep_for_numpy(string):
     string = string.replace('omega_hip0', 'omega_hip[0]')
     string = string.replace('omega_hip1', 'omega_hip[1]')
     string = string.replace('omega_hip2', 'omega_hip[2]')
+
+    string = string.replace('alpha_hip0', 'alpha_hip[0]')
+    string = string.replace('alpha_hip1', 'alpha_hip[1]')
+    string = string.replace('alpha_hip2', 'alpha_hip[2]')
 
     return(string)
 
