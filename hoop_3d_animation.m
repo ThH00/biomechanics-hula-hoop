@@ -23,8 +23,8 @@ E1 = [1;0;0];
 E2 = [0;1;0];
 E3 = [0;0;1];
 
-animation = VideoWriter('3D_hoop3_2contacts_moving_hip_3_3D.mp4', 'MPEG-4');
-aniemation.FrameRate = 10;
+animation = VideoWriter('advancing_rotating_hip.mp4', 'MPEG-4');
+animation.FrameRate = 10;
 open(animation);
 
 ang_arr = linspace(0,2*pi,100);

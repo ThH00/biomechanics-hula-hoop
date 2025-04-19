@@ -63,8 +63,8 @@ hip_ang_acc = np.array([alpha_hip[0],alpha_hip[1],alpha_hip[2]])
 # Define the array of variables that are a function of time
 # NOTE: I will just take derivative with respect vars, not tau
 vars = np.array([xbar_hoop[0], xbar_hoop[1], xbar_hoop[2], psi, theta, phi, xbar_hip[0], xbar_hip[1], xbar_hip[2]])
-varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot, thetadot, phidot, vbar_hip[0], vbar_hip[1], vbar_hip[2]],omega_hip[0],omega_hip[1],omega_hip[2])
-varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot, thetaddot, phiddot, abar_hip[0], abar_hip[1], abar_hip[2]],alpha_hip[0],alpha_hip[1],alpha_hip[2])
+varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot, thetadot, phidot, vbar_hip[0], vbar_hip[1], vbar_hip[2],omega_hip[0],omega_hip[1],omega_hip[2]])
+varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot, thetaddot, phiddot, abar_hip[0], abar_hip[1], abar_hip[2],alpha_hip[0],alpha_hip[1],alpha_hip[2]])
 n_vars = np.size(vars)
 
 ## Calculating the gap distance constraint, its derivative, and its gradient
