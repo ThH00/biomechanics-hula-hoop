@@ -8,10 +8,10 @@ R = 1.6;    % hoop radius
 r = 0.4;    % hip radius
 
 % steady motion 1
-tau = linspace(0,4*pi,100);
-phi0 = pi/6;
-phi = tau+phi0;
-dphi_dtau = 1;
+tau = linspace(0,8*pi,100);
+phi0 = pi-pi/6;
+phi = -tau+phi0;
+dphi_dtau = -1;
 dtheta_dau = (1-r/R)*dphi_dtau;
 
 % coordinates of hip center
@@ -22,10 +22,7 @@ y_hip = a*sin(tau);
 ang_arr = linspace(0,2*pi,100);
 
 
-
-
-
-animation = VideoWriter('steady_motion_1.mp4', 'MPEG-4');
+animation = VideoWriter('steady_motion_4.mp4', 'MPEG-4');
 animation.FrameRate = 10;
 open(animation);
 
@@ -39,16 +36,23 @@ for i=1:length(tau)
     hip_x = x_hip(i)+r*cos(ang_arr);
     hip_y = y_hip(i)+r*sin(ang_arr);
     hip = plot(hip_x,hip_y,'k','LineWidth',1);
+    hip_center = plot(x_hip(i),y_hip(i),'.','Color','k');
 
     % {er, ephi} basis
     er = cos(phi(i))*E1+sin(phi(i))*E2;
     ephi = cos(phi(i))*E2-sin(phi(i))*E1;
 
-    x_hoop = x_hip(i)
+    x_hoop = x_hip(i)-(R-r)*er(1);
+    y_hoop = y_hip(i)-(R-r)*er(2);
+
+    hoop_center = plot(x_hoop,y_hoop,'.','Color','b');
 
     % plotting the hoop
-    hoop_x = 
-    hoop_y = 
+    hoop_x = x_hoop+R*cos(ang_arr);
+    hoop_y = y_hoop+R*sin(ang_arr);
+
+    hoop = plot(hoop_x,hoop_y,'b','LineWidth',1);
+    hoop_marker = plot(hoop_x(1),hoop_y(1),'b','Marker','*','LineWidth',1);
     
     axis([-5,5,-5,5])
 
@@ -58,6 +62,8 @@ for i=1:length(tau)
     pause(0.001)
     
     delete(hip)
+    delete(hoop)
+    delete(hoop_marker)
 
 end
 close(animation)
