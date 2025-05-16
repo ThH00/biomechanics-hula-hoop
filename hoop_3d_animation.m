@@ -1,12 +1,12 @@
 % loading the outputs of the generalized-alpha algorithm
-load("q.mat")
+load("outputs/multiple_solutions/q.mat")
 
 % loading the coordinates of the center of the hip
-load("xbar_hip.mat")
+load("outputs/multiple_solutions/xbar_hip.mat")
 xbar_hip = xbar_hip';
 
 % loading the minizing values of tau and dv
-load("tau.mat")
+load("outputs/multiple_solutions/tau.mat")
 
 figure()
 hold on
@@ -102,7 +102,7 @@ for i = 1:length(q)
         x3+R_hoop*cos(ang_arr)*e1(3)+R_hoop*sin(ang_arr)*e2(3), ...
         'color','b','LineWidth',2);
 
-    % draw the minimzing points on hoop and hip
+    draw the minimzing points on hoop and hip
     for j = 1:2
         u = cos(tau(j,i))*e1+sin(tau(j,i))*e2;
         xM = [x1; x2; x3]+R_hoop*u;
