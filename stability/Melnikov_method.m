@@ -23,7 +23,7 @@ for i = 1:n
         y0 = [q0(i) p0(j)];
         [t,y] = ode45(@(t,y) simple_pendulum(t,y,m,l,g), tspan, y0);
         [t_e,y_e] = ode45(@(t_e,y_e) forced_simple_pendulum(t_e,y_e,m,l,g,epsilon), tspan, y0);
-        [t_d,y_d] = ode45(@(t_e,y_e) forced_damped_simple_pendulum(t_d,y_d,m,l,g,epsilon), tspan, y0);
+        [t_d,y_d] = ode45(@(t_d,y_d) forced_damped_simple_pendulum(t_d,y_d,m,l,g,epsilon), tspan, y0);
         
         plot(y(:,1),y(:,2),'k','LineWidth',2)
         hold on

@@ -14,7 +14,7 @@ start_time = time.time()
 # def parse_args():
 #     parser = argparse.ArgumentParser(description='Process some integers and floats.')
 #     parser.add_argument('mu_s', type=float, help='static friction coefficient (float)')
-#     parser.add_argument('mu_s', type=float, help='kinetic friction coefficient (float)')
+#     parser.add_argument('mu_k', type=float, help='kinetic friction coefficient (float)')
 #     parser.add_argument('--output_path', '-o', type=str, help='Output path (optional)')
     
 #     args = parser.parse_args()
@@ -51,13 +51,13 @@ class RhoInfInfiniteLoop(Exception):
         super().__init__(self.message)
 
 class MaxHoursAttained(Exception):
-    """This exception is raised when the maximum number of run hours specified by the use is exceeded."""
+    """This exception is raised when the maximum number of run hours specified by the user is exceeded."""
     def __init__(self, message="This exception is raised when the maximum run time is exceeded."):
         self.message = message
         super().__init__(self.message)
 
 class MaxLeavesAttained(Exception):
-    """This exception is raised when the maximum number of run leaves specified by the use is exceeded."""
+    """This exception is raised when the maximum number of leaves specified by the user is exceeded."""
     def __init__(self, message="This exception is raised when the maximum number of leaves is exceeded."):
         self.message = message
         super().__init__(self.message)
@@ -89,7 +89,6 @@ t_nd = np.sqrt(l_nd/a_nd)   # s, time nondimensionalization parameter
 
 # quantites following this line are nondimensional
 
-# the motion of the first block is prescribed (acts like a base plate)
 ndof = 6                    # total number of degress of freedom
 gr = 9.81/a_nd              # gravitational acceleration
 
@@ -108,28 +107,32 @@ It = 0.5*m*R_hoop**2        # rotational inertia of hoop about diameter
 Ia = m*R_hoop**2            # rotational inertia of hoop about axis passing through center perp to hoop plane
 
 # hip properties
-R_hip = 0.2/l_nd            # radius of the hip
+R_hip = 0.2/l_nd            # radius of the hip, hip is circular
 
 # the hip center is tracing an ellipse
 # position of the bottom center of hip (bottom of hip axis)
-x1bar_hip = 1*np.ones(ntime)*(t**2)/2
-x2bar_hip = np.zeros(ntime)+0.1
-xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
+# x1bar_hip = 1*np.ones(ntime)*(t**2)/2
+# x2bar_hip = np.zeros(ntime)+0.1
+# xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
+xbar_hip = np.zeros((ntime,3))
 # velocity of the bottom center of hip
-v1bar_hip = 1*np.ones(ntime)*t
-v2bar_hip = np.zeros(ntime)
-vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
+# v1bar_hip = 1*np.ones(ntime)*t
+# v2bar_hip = np.zeros(ntime)
+# vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
+vbar_hip = np.zeros((ntime,3))
 # acceleration of the bottom center of hip
-a1bar_hip = 1*np.ones(ntime)
-a2bar_hip = np.zeros(ntime)
-abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+# a1bar_hip = 1*np.ones(ntime)
+# a2bar_hip = np.zeros(ntime)
+# abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+abar_hip = np.zeros((ntime,3))
 
 # angular velocity and angular acceleration of hip
-omega_hip = np.array([0,0,1])   # angular velocity of hip
+# omega_hip = np.array([0,0,1])   # angular velocity of hip
+omega_hip = np.array([0,0,0])   # angular velocity of hip
 alpha_hip = np.array([0,0,0])   # angular acceleration of hip
 
-g.write(f"######\n Ruunning a simulation with the hip tracing a straight line:\n")
-g.write(f"      abar_hip = {a1bar_hip[0]} Ex+ {a2bar_hip[0]} Ey.\n")
+g.write(f"######\n Ruunning a simulation with the hip stationary:\n")
+g.write(f"      abar_hip = {abar_hip[0,0]} Ex+ {abar_hip[0,1]} Ey.\n")
 g.write(f"    The hip is rotating with an angular velocity omega_hip = {omega_hip}.\n")
 g.write(f"    Total duration of simulation: {tf}.\n")
 
@@ -139,7 +142,7 @@ ngamma = 0      # number of constraints at velocity level
 nN = 2          # number of gap distance constraints
 nF = 4          # number of friction constraints
 gammaF_lim = np.array([[0,1],[2,3]])    # connectivities of friction and normal forces
-nX = 3*ndof+3*ng+3*ngamma+3*nN+2*nF     # total number of constraints with their derivative
+nX = 3*ndof+3*ng+2*ngamma+3*nN+2*nF     # total number of constraints with their derivative
 
 # fixed basis vectors
 E1 = np.array([1,0,0])
@@ -168,8 +171,8 @@ Mdiag = np.array([m, m, m, It, It, Ia])
 M = np.diag(Mdiag)
 
 # applied forces (weight)
-force = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
-# force = np.array([0, 0, 0, 0, 0, 0])
+# force = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
+force = np.array([0, 0, 0, 0, 0, 0])
 
 # discritization of tau value for finding minimizing one
 n_tau = int(1/tol_n)
@@ -421,7 +424,6 @@ def combine_contact_constraints(q,u,a):
     return gN, gNdot, gNddot, WN, gammaF, gammadotF, WF
 
 
-
 def get_R(X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*index_sets):
     """Calculates the residual"""
     global corners_save, leaves_counter, iter, ntime
@@ -621,7 +623,7 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
         # the fixed_contact data is inputted into get_R_J
         fixed_contact = fixed_contact[0]
         fixed_contact_regions = True
-        print(f"Fixed contact fixed: {fixed_contact}")
+        print(f"At iter = {iter}, Fixed contact fixed: {fixed_contact}")
     else:
         fixed_contact_regions = False
 
@@ -633,7 +635,7 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
             contacts = np.zeros((MAXITERn+1,3*nN+2*nN),dtype=int)
             contacts[nu,:] = contacts_nu
         norm_R = np.linalg.norm(R,np.inf)
-        print(f"nu = {nu}")
+        print(f"iter = {iter}. nu = {nu}")
         print(f"norm(R) = {norm_R}")
 
         while np.abs(np.linalg.norm(R,np.inf))>tol_n and nu<MAXITERn:
@@ -650,14 +652,14 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
             print(f"nu = {nu}")
             print(f"norm(R) = {norm_R}")
 
-            if norm_R>10**10:
+            if norm_R>10**9:
                 # the Jacobian is blowing up
                 # (I am assuming this is happening because contact region is fixed, 
                 # update is being called from within solve_bifuration)
                 raise TypeError
         
         if nu == MAXITERn:
-            print(f"No Convergence for nu = {nu} at rho_inf = {rho_inf}")
+            print(f"No Convergence at iter = {iter} for nu = {nu} at rho_inf = {rho_inf}")
             raise MaxNewtonIterAttainedError
 
     except MaxNewtonIterAttainedError as e:
@@ -670,7 +672,7 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
             # if n_tau/int(1/tol_n) <100: # don't keep incrementing infinitely. without the if statement, anytime you don't converge, and you increase rho_inf, you will increase n_tau
             #     n_tau = n_tau*10
 
-            print(f"Max Newton iterations is attained. Unique A contacts are {unique_A}.")
+            print(f"At iter = {iter}, Max Newton iterations is attained. Unique A contacts are {unique_A}.")
 
             unique_contacts = np.empty((0, 10))
 
@@ -687,7 +689,7 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
             return unique_contacts, do_not_unpack
         return 
     except np.linalg.LinAlgError as e:
-        if norm_R>10**10:
+        if norm_R>10**9:
             # the Jacobian is blowing up
             # (I am assuming this is happening because contact region is fixed, 
             # update is being called from within solve_bifuration)
@@ -781,6 +783,10 @@ def solve(iter_start):
     while iter<ntime:
         print(f"iteration {iter}")
 
+        if iter == 190:
+            print('190')
+
+
         current_time = time.time()
         if current_time-start_time>(3600*max_hours):
             f.write(f'Program quit because max execution time {max_hours} hours was exceeded.')
@@ -823,9 +829,7 @@ def solve(iter_start):
 
         iter = iter+1
 
-        if iter == 190:
-            print('190')
-
+        
         if iter%25 == 0:
             save_arrays()
 
@@ -840,7 +844,7 @@ def solve(iter_start):
 
         leaves_counter = leaves_counter + 1
         # f.write(f'leaves counter incremented to leaf {leaves_counter}\n')
-        print(f'leaves_counter = {leaves_counter}')
+        print(f'iter = {iter}. leaves_counter = {leaves_counter}')
 
         # if leaves_counter>max_leaves:
         #     f.write(f'Program quit because max number of leaves that is {max_leaves} was exceeded.\n')
@@ -948,7 +952,7 @@ nAV = ndof+nN+nF
 AV0 = np.zeros(nAV)
 
 # initial position
-q0 = np.array([0, 0, 1, 0, 0, 0])
+q0 = np.array([R_hip-R_hoop, 0, 0, 0, 0, 0])
 # initial velocity
 u0 = np.array([0, 0, 0, 0, 0, 1])
 
