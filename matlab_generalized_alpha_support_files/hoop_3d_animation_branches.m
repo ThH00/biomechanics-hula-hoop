@@ -1,8 +1,8 @@
 % loading the outputs of the generalized-alpha algorithm
-load("outputs/multiple_solutions/q.mat")
+load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/q.mat")
 
 % loading the coordinates of the center of the hip
-load("outputs/multiple_solutions/xbar_hip.mat")
+load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/xbar_hip.mat")
 xbar_hip = xbar_hip';
 
 % loading the minizing values of tau and dv
@@ -23,8 +23,8 @@ E1 = [1;0;0];
 E2 = [0;1;0];
 E3 = [0;0;1];
 
-animation = VideoWriter('outputs/multiple_solutions/advancing_rotating_hip.mp4', 'MPEG-4');
-animation.FrameRate = 10;
+animation = VideoWriter('/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/advancing_rotating_hip.mp4', 'MPEG-4');
+animation.FrameRate = 30;
 open(animation);
 
 ang_arr = linspace(0,2*pi,100);
@@ -39,7 +39,10 @@ hold on
 
 k = 1;
 
-for i = 1:length(q(k,1,:))
+view_array = [15,15;90,0;0,90];
+% isometric, front, top
+
+for i = 1:280 %length(q(k,1,:))
 
     
     % view(0,30)
@@ -85,24 +88,41 @@ for i = 1:length(q(k,1,:))
     e2 = (R3*R2*R1)'*E2;
     e3 = (R3*R2*R1)'*E3;
 
-    center_plot = plot3(x1, x2, x3, 'Marker', '.', 'MarkerSize', 10);
+    title(num2str(i));
 
-    e1_plot = quiver3(x1, x2, x3, e1(1), e1(2), e1(3),'r');
-    e2_plot = quiver3(x1, x2, x3, e2(1), e2(2), e2(3),'g');
-    e3_plot = quiver3(x1, x2, x3, e3(1), e3(2), e3(3),'b');
+    for p = 1:3
+    
+        subplot(1,3,p)
 
-    % plotting the hip
-    for j = 1:2:length(ang_arr)
-        hip(j) = plot3(xbar_hip(1,i)+r*cos(ang_arr(j)),xbar_hip(2,i)+r*sin(ang_arr(j)),z,'k');
+        center_plot(p) = plot3(x1, x2, x3, 'Marker', '.', 'MarkerSize', 10);
+    
+        e1_plot(p) = quiver3(x1, x2, x3, e1(1), e1(2), e1(3),'r');
+        e2_plot(p) = quiver3(x1, x2, x3, e2(1), e2(2), e2(3),'g');
+        e3_plot(p) = quiver3(x1, x2, x3, e3(1), e3(2), e3(3),'b');
+        
+        % plotting the hip
+        for j = 1:2:length(ang_arr)
+            hip(p,j) = plot3(xbar_hip(1,i)+r*cos(ang_arr(j)),xbar_hip(2,i)+r*sin(ang_arr(j)),z,'k');
+        end
+    
+        [circle_hip(p), center_hip(p), angle_hip(p)] = plot_circle(0.2, [xbar_hip(1,i), xbar_hip(2,i)], 0, 'k');
+    
+        % plotting the hoop
+        circle(p) = plot3(x1+R_hoop*cos(ang_arr)*e1(1)+R_hoop*sin(ang_arr)*e2(1), ...
+            x2+R_hoop*cos(ang_arr)*e1(2)+R_hoop*sin(ang_arr)*e2(2), ...
+            x3+R_hoop*cos(ang_arr)*e1(3)+R_hoop*sin(ang_arr)*e2(3), ...
+            'color','b','LineWidth',2);
+    
+        axis equal
+        xlim([-1 1])
+        ylim([-1 1])
+        
+        xlabel('x')
+        ylabel('y')
+        zlabel('z')
+        view(view_array(p,1),view_array(p,2))
+
     end
-
-    [circle_hip, center_hip, angle_hip] = plot_circle(0.2, [xbar_hip(1,i), xbar_hip(2,i)], 0, 'k');
-
-    % plotting the hoop
-    circle = plot3(x1+R_hoop*cos(ang_arr)*e1(1)+R_hoop*sin(ang_arr)*e2(1), ...
-        x2+R_hoop*cos(ang_arr)*e1(2)+R_hoop*sin(ang_arr)*e2(2), ...
-        x3+R_hoop*cos(ang_arr)*e1(3)+R_hoop*sin(ang_arr)*e2(3), ...
-        'color','b','LineWidth',2);
 
     % draw the minimzing points on hoop and hip
     % for j = 1:2
@@ -116,22 +136,21 @@ for i = 1:length(q(k,1,:))
     %     min_hip(j) = plot3(xP(1),xP(2),xP(3),'*','Color','r','LineWidth',2);
     % end
 
-    title(num2str(i));
-
     drawnow
     writeVideo(animation, getframe(gcf))
 
     % pause(0.001)
-
-    delete(center_plot)
-    delete(e1_plot)
-    delete(e2_plot)
-    delete(e3_plot)
-    delete(circle)
-    delete(hip)
-
-    delete(circle_hip)
-    delete(angle_hip)
+    for p = 1:3
+        subplot(1,3,1)
+        delete(center_plot(p))
+        delete(e1_plot(p))
+        delete(e2_plot(p))
+        delete(e3_plot(p))
+        delete(circle(p))
+        delete(hip(p,:))
+        delete(circle_hip(p))
+        delete(angle_hip(p))
+    end
 
     % delete(min_hoop)
     % delete(min_hip)
@@ -139,12 +158,12 @@ for i = 1:length(q(k,1,:))
 end
 
 close(animation)
-
-load('gN.mat')
-figure()
-plot(gN(1,:))
-hold on
-plot(gN(2,:))
+% 
+% load('gN.mat')
+% figure()
+% plot(gN(1,:))
+% hold on
+% plot(gN(2,:))
 
 figure()
 subplot(1,3,1)

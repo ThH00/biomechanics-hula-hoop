@@ -24,7 +24,7 @@ start_time = time.time()
 # mu_s, mu_k, output_path = parse_args()
 
 ###############################
-mu_s = 1
+mu_s = 10**9
 mu_k = 0.3
 output_path = os.path.join(os.getcwd(), "outputs/multiple_solutions")
 os.makedirs(output_path, exist_ok=True)
@@ -171,8 +171,8 @@ Mdiag = np.array([m, m, m, It, It, Ia])
 M = np.diag(Mdiag)
 
 # applied forces (weight)
-# force = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
-force = np.array([0, 0, 0, 0, 0, 0])
+force = np.array([0, 0, -m*gr, 0, 0, 0])      # I removed gravity for now
+# force = np.array([0, 0, 0, 0, 0, 0])
 
 # discritization of tau value for finding minimizing one
 n_tau = int(1/tol_n)
@@ -510,7 +510,7 @@ def get_R(X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*index_sets):
                     D[i] = 1
                     if np.linalg.norm(r*gammaFdot[gammaF_lim[i,:]]-lambdaF[gammaF_lim[i,:]])<=mu_s*(lambdaN[i]):
                         # E-stick
-                        E[1] = 1
+                        E[i] = 1
                 if r*ksiN[i]-PN[i] <= 0:
                     B[i] = 1
                     if r*gNddot[i]-lambdaN[i] <= 0:
@@ -664,29 +664,35 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
 
     except MaxNewtonIterAttainedError as e:
         if fixed_contact_regions is False:
-            # if unique contact regions were already determined, don't recalculate them
-            unique_A = np.unique(contacts[:,0:nN], axis=0)
-            do_not_unpack = True    
-            # because if the number of contact regions is 6 which is the original number
-            # of outputs of update, each row of unique contacts will be assinged as an output variable
-            # if n_tau/int(1/tol_n) <100: # don't keep incrementing infinitely. without the if statement, anytime you don't converge, and you increase rho_inf, you will increase n_tau
-            #     n_tau = n_tau*10
 
-            print(f"At iter = {iter}, Max Newton iterations is attained. Unique A contacts are {unique_A}.")
+            unique_contacts = np.unique(contacts, axis=0)
+            do_not_unpack = True  
+            if np.shape(unique_contacts)[0]:
+                return unique_contacts, do_not_unpack
+            else:
+                # if unique contact regions were already determined, don't recalculate them
+                unique_A = np.unique(contacts[:,0:nN], axis=0)
+              
 
-            unique_contacts = np.empty((0, 10))
+                print(f"At iter = {iter}, Max Newton iterations is attained. Unique A contacts are {unique_A}.")
 
-            if np.any(np.all(unique_A == np.array([0,0]), axis=1)):    # check if [0,0] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_a])
-            if np.any(np.all(unique_A == np.array([1,0]), axis=1)):    # check if [1,0] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_b])
-            if np.any(np.all(unique_A == np.array([0,1]), axis=1)):    # check if [0,1] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_c])
-            if np.any(np.all(unique_A == np.array([1,1]), axis=1)):    # check if [1,1] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_d])
+                unique_contacts = np.empty((0, 10))
 
+                if np.any(np.all(unique_A == np.array([0,0]), axis=1)):    # check if [0,0] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_a])
+                if np.any(np.all(unique_A == np.array([1,0]), axis=1)):    # check if [1,0] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_b])
+                if np.any(np.all(unique_A == np.array([0,1]), axis=1)):    # check if [0,1] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_c])
+                if np.any(np.all(unique_A == np.array([1,1]), axis=1)):    # check if [1,1] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_d])
 
-            return unique_contacts, do_not_unpack
+                # because if the number of contact regions is 6 which is the original number
+                # of outputs of update, each row of unique contacts will be assinged as an output variable
+                # if n_tau/int(1/tol_n) <100: # don't keep incrementing infinitely. without the if statement, anytime you don't converge, and you increase rho_inf, you will increase n_tau
+                #     n_tau = n_tau*10
+ 
+                return unique_contacts, do_not_unpack
         return 
     except np.linalg.LinAlgError as e:
         if norm_R>10**9:
@@ -782,9 +788,6 @@ def solve(iter_start):
     # for iter in range(iter_start,ntime):
     while iter<ntime:
         print(f"iteration {iter}")
-
-        if iter == 190:
-            print('190')
 
 
         current_time = time.time()
@@ -954,7 +957,7 @@ AV0 = np.zeros(nAV)
 # initial position
 q0 = np.array([R_hip-R_hoop, 0, 0, 0, 0, 0])
 # initial velocity
-u0 = np.array([0, 0, 0, 0, 0, 1])
+u0 = np.array([-0.1, 0, 0, 0, 0, 10])
 
 # initial normal gap speeds
 gNdot0 = np.zeros(nN)   # starting from rest
