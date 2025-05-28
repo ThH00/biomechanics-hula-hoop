@@ -132,10 +132,10 @@ class Simulation:
         self.gammaF_save = np.zeros((1,self.nF,self.ntime))
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
         # initial position
-        q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
+        q0 = np.array([self.R_hip-self.R_hoop-0.000001, 0, 0, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([-0.1, 0, 0, 0, 0, 10])
+        u0 = np.array([-0.1, 0, 0, 0, 0, 0])
         self.u_save[0,:,0] = u0
 
 
@@ -958,11 +958,12 @@ class Simulation:
                 print(f'error = {e}')
         return
 
+# hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
+# # Test ibi and bbb
+# test = Simulation(ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
+# test.solve_ibi()
+# test.solve_ibi()
 
-# # Test ibi
-# testibi = Simulation(ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
-# testibi.solve_ibi()
-
-# Test ibi
-testbbb = Simulation(ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
-testbbb.solve_ibi()
+# hoop just sliding down, mu_s=1, u0 = np.array([-0.1, 0, 0, 0, 0, 0])
+test = Simulation(ntime = 5, mu_s=1, mu_k=0.3, eN=0, eF=0, max_leaves=5)
+test.solve_ibi()
