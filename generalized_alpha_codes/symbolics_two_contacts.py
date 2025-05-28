@@ -147,6 +147,9 @@ def prep_for_numpy(string):
     string = string.replace('sin', 'np.sin')
     string = string.replace('cos', 'np.cos')
 
+    string = string.replace('R_hoop', 'self.R_hoop')
+    string = string.replace('R_hip', 'self.R_hips')
+
     string = string.replace('xbar_hip0', 'xbar_hip[0]')
     string = string.replace('xbar_hip1', 'xbar_hip[1]')
     string = string.replace('xbar_hip2', 'xbar_hip[2]')
@@ -168,13 +171,13 @@ def prep_for_numpy(string):
     string = string.replace('abar_hoop1', 'abar_hoop[1]')
     string = string.replace('abar_hoop2', 'abar_hoop[2]')
 
-    string = string.replace('omega_hip0', 'omega_hip[0]')
-    string = string.replace('omega_hip1', 'omega_hip[1]')
-    string = string.replace('omega_hip2', 'omega_hip[2]')
+    string = string.replace('omega_hip0', 'self.omega_hip[0]')
+    string = string.replace('omega_hip1', 'self.omega_hip[1]')
+    string = string.replace('omega_hip2', 'self.omega_hip[2]')
 
-    string = string.replace('alpha_hip0', 'alpha_hip[0]')
-    string = string.replace('alpha_hip1', 'alpha_hip[1]')
-    string = string.replace('alpha_hip2', 'alpha_hip[2]')
+    string = string.replace('alpha_hip0', 'self.alpha_hip[0]')
+    string = string.replace('alpha_hip1', 'self.alpha_hip[1]')
+    string = string.replace('alpha_hip2', 'self.alpha_hip[2]')
 
     return(string)
 

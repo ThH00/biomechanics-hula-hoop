@@ -642,6 +642,13 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,leaf,*fixed_conta
             norm_R = np.linalg.norm(R,np.inf)
             print(f"nu = {nu}")
             print(f"norm(R) = {norm_R}")
+
+            if norm_R>10**9:
+                # the Jacobian is blowing up
+                # (I am assuming this is happening because contact region is fixed, 
+                # update is being called from within solve_bifuration)
+                raise MaxNewtonIterAttainedError
+            
         if nu == MAXITERn:
             print(f"Iteration {iter} and leaf {leaf}:")
             print(f"No Convergence for nu = {nu} at rho_inf = {rho_inf}\n")
@@ -649,37 +656,49 @@ def update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,leaf,*fixed_conta
 
     except MaxNewtonIterAttainedError as e:
         if fixed_contact_regions is False:
-            # if unique contact regions were already determined, don't recalculate them
-            unique_A = np.unique(contacts[:,0:nN], axis=0)
-            do_not_unpack = True    
-            # because if the number of contact regions is 6 which is the original number
-            # of outputs of update, each row of unique contacts will be assinged as an output variable
-            # if n_tau/int(1/tol_n) <100: # don't keep incrementing infinitely. without the if statement, anytime you don't converge, and you increase rho_inf, you will increase n_tau
-            #     n_tau = n_tau*10
 
-            print(f"Max Newton iterations is attained. Unique A contacts are {unique_A}.")
+            unique_contacts = np.unique(contacts, axis=0)
+            do_not_unpack = True  
+            if np.shape(unique_contacts)[0]:
+                return unique_contacts, do_not_unpack
+            else:
+                # if unique contact regions were already determined, don't recalculate them
+                unique_A = np.unique(contacts[:,0:nN], axis=0)
+              
 
-            unique_contacts = np.empty((0, 10))
+                print(f"At iter = {iter}, Max Newton iterations is attained. Unique A contacts are {unique_A}.")
 
-            if np.any(np.all(unique_A == np.array([0,0]), axis=1)):    # check if [0,0] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_a])
-            if np.any(np.all(unique_A == np.array([1,0]), axis=1)):    # check if [1,0] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_b])
-            if np.any(np.all(unique_A == np.array([0,1]), axis=1)):    # check if [0,1] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_c])
-            if np.any(np.all(unique_A == np.array([1,1]), axis=1)):    # check if [1,1] is in 'A'
-                unique_contacts = np.vstack([unique_contacts,unique_contacts_d])
+                unique_contacts = np.empty((0, 10))
 
+                if np.any(np.all(unique_A == np.array([0,0]), axis=1)):    # check if [0,0] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_a])
+                if np.any(np.all(unique_A == np.array([1,0]), axis=1)):    # check if [1,0] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_b])
+                if np.any(np.all(unique_A == np.array([0,1]), axis=1)):    # check if [0,1] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_c])
+                if np.any(np.all(unique_A == np.array([1,1]), axis=1)):    # check if [1,1] is in 'A'
+                    unique_contacts = np.vstack([unique_contacts,unique_contacts_d])
 
-            return unique_contacts, do_not_unpack
+                # because if the number of contact regions is 6 which is the original number
+                # of outputs of update, each row of unique contacts will be assinged as an output variable
+                # if n_tau/int(1/tol_n) <100: # don't keep incrementing infinitely. without the if statement, anytime you don't converge, and you increase rho_inf, you will increase n_tau
+                #     n_tau = n_tau*10
+ 
+                return unique_contacts, do_not_unpack
         return 
     except np.linalg.LinAlgError as e:
-        # the Jacobian matrix is singular, not invertable
-        print(f"Error {e} at iteration {iter} and leaf {leaf}.")
-        # increment rho_inf        
-        update_rho_inf()
-        # calling function recursively
-        update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,leaf,fixed_contact)
+        if norm_R>10**9:
+            # the Jacobian is blowing up
+            # (I am assuming this is happening because contact region is fixed, 
+            # update is being called from within solve_bifuration)
+            raise TypeError
+        else:
+            # the Jacobian matrix is singular, not invertable
+            print(e)
+            # increment rho_inf        
+            update_rho_inf()
+            # calling function recursively
+            update(prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,fixed_contact)
     except Exception as e:
         # any other exception
         g.write(f"\n    The exception {e} was raised during the calculation of some leaf at iteration {iter}.\n")

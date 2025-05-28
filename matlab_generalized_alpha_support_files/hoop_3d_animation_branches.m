@@ -42,7 +42,7 @@ k = 1;
 view_array = [15,15;90,0;0,90];
 % isometric, front, top
 
-for i = 1:280 %length(q(k,1,:))
+for i = 1:826 %length(q(k,1,:))
 
     
     % view(0,30)
