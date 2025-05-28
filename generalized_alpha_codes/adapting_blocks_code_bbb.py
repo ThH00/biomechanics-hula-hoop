@@ -724,8 +724,6 @@ def get_X_components(X):
     return a,U,Q,Kappa_g,Lambda_g,lambda_g,Lambda_gamma,lambda_gamma,\
         Kappa_N,Lambda_N,lambda_N,Lambda_F,lambda_F
 
-bif_tracker = np.array([0])
-
 def save_arrays():
     global q_save, u_save, X_save, gNdot_save, gammaF_save, AV_save
 
@@ -753,10 +751,6 @@ def save_arrays():
 
 def increment_saved_arrays(leaf):
     global q_save, u_save, X_save, gNdot_save, gammaF_save, AV_save, corners_save
-    global bif_tracker
-
-    bif_tracker = np.vstack((bif_tracker,np.array([iter])))
-
     save_arrays()
 
     # increment saved arrays

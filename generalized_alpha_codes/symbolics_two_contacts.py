@@ -148,7 +148,7 @@ def prep_for_numpy(string):
     string = string.replace('cos', 'np.cos')
 
     string = string.replace('R_hoop', 'self.R_hoop')
-    string = string.replace('R_hip', 'self.R_hips')
+    string = string.replace('R_hip', 'self.R_hip')
 
     string = string.replace('xbar_hip0', 'xbar_hip[0]')
     string = string.replace('xbar_hip1', 'xbar_hip[1]')
