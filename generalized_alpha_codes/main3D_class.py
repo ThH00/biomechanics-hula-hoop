@@ -34,10 +34,6 @@ class MaxLeavesAttained(Exception):
         self.message = message
         super().__init__(self.message)
 
-class NoLocalMinima(Exception):
-    def __init__(self, message="The distance between the hoop and the hip has less then 1 or more than 2 local minima."):
-        super().__init__(message)
-
 class NoBifurcationConvergence(Exception):
     """This exception is raised when all leaves did not converge. Currently only used in bbb."""
     def __init__(self, message="This exception is raised when all leaves did not converge."):
@@ -58,8 +54,8 @@ class Simulation:
         # multiple solution parameters
         self.max_leaves = max_leaves
         self.bif_counter = 0
-        self.leaves_counter = 0
-        self.total_leaves = 1   # used in bbb
+        self.leaves_counter = 0 # used in ibi only (double checl)
+        self.total_leaves = 1   # used in bbb only
         # nondimensionalization parameters
         l_nd = 1       # m, length nondimensionalization paramter
         m_nd = 1       # kg, mass nondimensionalization parameter
@@ -73,9 +69,18 @@ class Simulation:
         # hip properties
         self.R_hip = 0.2/l_nd            # radius of the hip, hip is circular
         # hip motion
-        self.xbar_hip = np.zeros((self.ntime,3))
-        self.vbar_hip = np.zeros((self.ntime,3))
-        self.abar_hip = np.zeros((self.ntime,3))
+        x1bar_hip = 1*np.ones(ntime)*(self.t**2)/2
+        x2bar_hip = 1*np.ones(ntime)*(self.t**2)/2
+        self.xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
+        v1bar_hip = 1*np.ones(ntime)*self.t
+        v2bar_hip = 1*np.ones(ntime)*self.t
+        self.vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
+        a1bar_hip = 1*np.ones(ntime)
+        a2bar_hip = 1*np.ones(ntime)
+        self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+        # self.xbar_hip = np.zeros((self.ntime,3))
+        # self.vbar_hip = np.zeros((self.ntime,3))
+        # self.abar_hip = np.zeros((self.ntime,3))
         self.omega_hip = np.array([0,0,0])   # angular velocity of hip
         self.alpha_hip = np.array([0,0,0])   # angular acceleration of hip
         # hoop properties
@@ -132,10 +137,10 @@ class Simulation:
         self.gammaF_save = np.zeros((1,self.nF,self.ntime))
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
         # initial position
-        q0 = np.array([self.R_hip-self.R_hoop-0.000001, 0, 0, 0, 0, 0])
+        q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([-0.1, 0, 0, 0, 0, 0])
+        u0 = np.array([-0.1, 0, 0, 0, 0, 10])
         self.u_save[0,:,0] = u0
 
 
@@ -197,6 +202,9 @@ class Simulation:
         # Find the minimizers of dh
         # Find local minima (less than neighbors)
         min_indices = argrelextrema(dh, np.less)[0]
+        if min_indices.size == 0:
+            # if there is no minimzing index, then either distribution is uniform, of local min happening at edge
+            min_indices = [0]
         # Find the minizing value of tau
         minimizing_tau = tau[min_indices]
 
@@ -337,10 +345,6 @@ class Simulation:
             # saving values
             # minimizing_tau_save[0,iter] = tau.item()
             # CONCERN: nonsmooth jumps in contact functions
-        else:
-            # raise error
-            # this error might be raised when the hoop is horizontal and centered at the hip, in which case there is no contact between hoop and hip and code proceeds normally
-            raise NoLocalMinima()
 
         return gN, gNdot, gNddot, WN, gammaF, gammadotF, WF
     
@@ -534,7 +538,7 @@ class Simulation:
             # the fixed_contact data is inputted into get_R_J
             fixed_contact = fixed_contact[0]
             fixed_contact_regions = True
-            # print(f"At iter = {iter}, Fixed contact fixed: {fixed_contact}")
+            print(f"At iter = {iter}, Fixed contact fixed: {fixed_contact}")
         else:
             fixed_contact_regions = False
 
@@ -572,31 +576,46 @@ class Simulation:
             if nu == self.MAXITERn:
                 # print(f"No Convergence at iter = {iter} for nu = {nu} at rho_inf = {rho_inf}")
                 raise MaxNewtonIterAttainedError
+            
+            if fixed_contact_regions == True:
+                print(f"Freeing up the contact configuration.")
+                R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
+                norm_R = np.linalg.norm(R,np.inf)
+                print(f"norm(R) = {norm_R}")
+                if norm_R>self.tol_n:
+                    raise MaxNewtonIterAttainedError
 
         except MaxNewtonIterAttainedError as e:
             if fixed_contact_regions is False:
 
                 unique_contacts = np.unique(contacts, axis=0)
                 do_not_unpack = True  
-                if np.shape(unique_contacts)[0]:
+                if np.shape(unique_contacts)[0]>1:
                     return unique_contacts, do_not_unpack
                 else:
                     # if unique contact regions were already determined, don't recalculate them
-                    unique_A = np.unique(contacts[:,0:self.nN], axis=0)
+                    
                 
 
                     # print(f"At iter = {iter}, Max Newton iterations is attained. Unique A contacts are {unique_A}.")
 
                     unique_contacts = np.empty((0, 10))
 
-                    if np.any(np.all(unique_A == np.array([0,0]), axis=1)):    # check if [0,0] is in 'A'
-                        unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
-                    if np.any(np.all(unique_A == np.array([1,0]), axis=1)):    # check if [1,0] is in 'A'
-                        unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
-                    if np.any(np.all(unique_A == np.array([0,1]), axis=1)):    # check if [0,1] is in 'A'
-                        unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
-                    if np.any(np.all(unique_A == np.array([1,1]), axis=1)):    # check if [1,1] is in 'A'
-                        unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
+                    unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
+                    unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
+                    unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
+                    unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
+
+
+                    # unique_A = np.unique(contacts[:,0:self.nN], axis=0)
+                    # if np.any(np.all(unique_A == np.array([0,0]), axis=1)):    # check if [0,0] is in 'A'
+                    #     unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
+                    # if np.any(np.all(unique_A == np.array([1,0]), axis=1)):    # check if [1,0] is in 'A'
+                    #     unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
+                    # if np.any(np.all(unique_A == np.array([0,1]), axis=1)):    # check if [0,1] is in 'A'
+                    #     unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
+                    # if np.any(np.all(unique_A == np.array([1,1]), axis=1)):    # check if [1,1] is in 'A'
+                    #     unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
 
                     # because if the number of contact regions is 6 which is the original number
                     # of outputs of update, each row of unique contacts will be assinged as an output variable
@@ -614,10 +633,17 @@ class Simulation:
             else:
                 # the Jacobian matrix is singular, not invertable
                 print(e)
-                # increment rho_inf        
-                self.update_rho_inf()
+                # increment rho_inf
+                try:        
+                    self.update_rho_inf()
+                except Exception as e:
+                    if fixed_contact_regions == True:
+                        return
+                    else:
+                        raise e
                 # calling function recursively
                 self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,fixed_contact)
+                
         except Exception as e:
             # any other exception
             raise e
@@ -657,23 +683,23 @@ class Simulation:
         return a,U,Q,Kappa_g,Lambda_g,lambda_g,Lambda_gamma,lambda_gamma,\
             Kappa_N,Lambda_N,lambda_N,Lambda_F,lambda_F
 
-    def increment_saved_arrays(self):
+    def increment_saved_arrays(self,leaf):
         '''Increment saved arrays due to a bifurcation.'''
         
         self.save_arrays()
 
         # increment saved arrays
-        q_save_addition = np.tile(self.q_save[self.leaves_counter,:,:],(1,1,1))
+        q_save_addition = np.tile(self.q_save[leaf,:,:],(1,1,1))
         self.q_save = np.vstack((self.q_save,q_save_addition))
-        u_save_addition = np.tile(self.u_save[self.leaves_counter,:,:],(1,1,1))
+        u_save_addition = np.tile(self.u_save[leaf,:,:],(1,1,1))
         self.u_save = np.vstack((self.u_save,u_save_addition))
-        X_save_addition = np.tile(self.X_save[self.leaves_counter,:,:],(1,1,1))
+        X_save_addition = np.tile(self.X_save[leaf,:,:],(1,1,1))
         self.X_save = np.vstack((self.X_save,X_save_addition))
-        gNdot_save_addition = np.tile(self.gNdot_save[self.leaves_counter,:,:],(1,1,1))
+        gNdot_save_addition = np.tile(self.gNdot_save[leaf,:,:],(1,1,1))
         self.gNdot_save = np.vstack((self.gNdot_save,gNdot_save_addition))
-        gammaF_save_addition = np.tile(self.gammaF_save[self.leaves_counter,:,:],(1,1,1))
+        gammaF_save_addition = np.tile(self.gammaF_save[leaf,:,:],(1,1,1))
         self.gammaF_save = np.vstack((self.gammaF_save,gammaF_save_addition))
-        AV_save_addition = np.tile(self.AV_save[self.leaves_counter,:,:],(1,1,1))
+        AV_save_addition = np.tile(self.AV_save[leaf,:,:],(1,1,1))
         self.AV_save = np.vstack((self.AV_save,AV_save_addition))
 
     def solve_ibi(self,iter_start=1):
@@ -737,8 +763,8 @@ class Simulation:
 
             # g.write(f'end (leaf {leaves_counter})\n')
             
-            self.increment_saved_arrays()
-            leaves_counter = leaves_counter + 1
+            self.increment_saved_arrays(self.leaves_counter)
+            self.leaves_counter = self.leaves_counter + 1
             # f.write(f'leaves counter incremented to leaf {leaves_counter}\n')
             # print(f'iter = {iter}. leaves_counter = {leaves_counter}')
             # if leaves_counter>max_leaves:
@@ -747,7 +773,7 @@ class Simulation:
 
         return
 
-    def solve_bifurcation_ibi(self,iter_bif,leaves_counter,*fixed_contact_region_params):
+    def solve_bifurcation_ibi(self,iter_bif,*fixed_contact_region_params):
         self.bif_counter +=1
 
         # fixed_contact_regions = True
@@ -765,22 +791,22 @@ class Simulation:
             
             try:
                 fixed_contact  = unique_contacts[k,:]
-                X,AV,q,u,gNdot,gammaF = self.update(iter,self.X_save[leaves_counter,:,iter_bif-1],self.AV_save[leaves_counter,:,iter_bif-1],
-                                        self.q_save[leaves_counter,:,iter_bif-1],self.u_save[leaves_counter,:,iter_bif-1],
-                                        self.gNdot_save[leaves_counter,:,iter_bif-1],self.gammaF_save[leaves_counter,:,iter_bif-1],
+                X,AV,q,u,gNdot,gammaF = self.update(iter,self.X_save[self.leaves_counter,:,iter_bif-1],self.AV_save[self.leaves_counter,:,iter_bif-1],
+                                        self.q_save[self.leaves_counter,:,iter_bif-1],self.u_save[self.leaves_counter,:,iter_bif-1],
+                                        self.gNdot_save[self.leaves_counter,:,iter_bif-1],self.gammaF_save[self.leaves_counter,:,iter_bif-1],
                                         fixed_contact)
 
-                self.q_save[leaves_counter,:,iter_bif] = q
-                self.u_save[leaves_counter,:,iter_bif] = u
-                self.X_save[leaves_counter,:,iter_bif] = X
-                self.gNdot_save[leaves_counter,:,iter_bif] = gNdot
-                self.gammaF_save[leaves_counter,:,iter_bif] = gammaF
-                self.AV_save[leaves_counter,:,iter_bif] = AV
+                self.q_save[self.leaves_counter,:,iter_bif] = q
+                self.u_save[self.leaves_counter,:,iter_bif] = u
+                self.X_save[self.leaves_counter,:,iter_bif] = X
+                self.gNdot_save[self.leaves_counter,:,iter_bif] = gNdot
+                self.gammaF_save[self.leaves_counter,:,iter_bif] = gammaF
+                self.AV_save[self.leaves_counter,:,iter_bif] = AV
                 # f.write(f'{k}-th unique contact convergence successfull\n')            
 
                 self.solve_ibi(iter_bif+1)
 
-                if leaves_counter > self.max_leaves:
+                if self.leaves_counter > self.max_leaves:
                     break
 
             except TypeError as e:       
@@ -965,5 +991,5 @@ class Simulation:
 # test.solve_ibi()
 
 # hoop just sliding down, mu_s=1, u0 = np.array([-0.1, 0, 0, 0, 0, 0])
-test = Simulation(ntime = 5, mu_s=1, mu_k=0.3, eN=0, eF=0, max_leaves=5)
+test = Simulation(ntime = 2000, mu_s=1, mu_k=0.3, eN=0, eF=0, max_leaves=5)
 test.solve_ibi()

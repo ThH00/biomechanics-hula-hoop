@@ -1,8 +1,8 @@
 % loading the outputs of the generalized-alpha algorithm
-load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/q.mat")
+load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/may_29_1257am/q.mat")
 
 % loading the coordinates of the center of the hip
-load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/xbar_hip.mat")
+load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/may_29_1257am/xbar_hip.mat")
 xbar_hip = xbar_hip';
 
 % loading the minizing values of tau and dv
