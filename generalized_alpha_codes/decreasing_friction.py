@@ -41,7 +41,7 @@ class NoBifurcationConvergence(Exception):
         super().__init__(self.message)
 
 class Simulation:
-    def __init__(self, ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5):
+    def __init__(self, ntime, mu_s, mu_k, eN, eF, max_leaves, X0, AV0, q0, u0, gNdot0, gammaF0):
         # path for outputs
         self.output_path = os.path.join(os.getcwd(), "outputs/multiple_solutions")  # Output path
         os.makedirs(self.output_path, exist_ok=True)
@@ -69,17 +69,17 @@ class Simulation:
         # hip properties
         self.R_hip = 0.2/l_nd            # radius of the hip, hip is circular
         # hip motion
-        omega = 1
+        omega = 10
         a = 1
         b = 1
         x1bar_hip = a*np.cos(omega*self.t)
         x2bar_hip = b*np.sin(omega*self.t)
         self.xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
-        v1bar_hip = a*omega*np.cos(omega*self.t)
-        v2bar_hip = b*omega*np.sin(omega*self.t)
+        v1bar_hip = -a*omega*np.sin(omega*self.t)
+        v2bar_hip = b*omega*np.cos(omega*self.t)
         self.vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
-        a1bar_hip = a*omega**2*np.cos(omega*self.t)
-        a2bar_hip = b*omega**2*np.sin(omega*self.t)
+        a1bar_hip = -a*omega**2*np.cos(omega*self.t)
+        a2bar_hip = -b*omega**2*np.sin(omega*self.t)
         self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
         # self.xbar_hip = np.zeros((self.ntime,3))
         # self.vbar_hip = np.zeros((self.ntime,3))
@@ -140,11 +140,14 @@ class Simulation:
         self.gammaF_save = np.zeros((1,self.nF,self.ntime))
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
         # initial position
-        q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([-0.1, 0, 0, 0, 0, 10])
         self.u_save[0,:,0] = u0
+        # other initial conditions
+        self.X_save[0,:,0] = X0
+        self.gNdot_save[0,:,0] = gNdot0
+        self.gammaF_save[0,:,0] = gammaF0
+        self.AV_save[0,:,0] = AV0
 
     def save_arrays(self):
         """Saving arrays."""
@@ -595,13 +598,15 @@ class Simulation:
                 if fixed_contact_regions is False:
 
                     unique_contacts = np.unique(contacts, axis=0)
+                    # removing row of zeros
+                    unique_contacts = unique_contacts[~np.all(unique_contacts == 0, axis=1)]
                     do_not_unpack = True  
                     if np.shape(unique_contacts)[0]>1:
                         return unique_contacts, do_not_unpack
                     else:
                         # if unique contact regions were already determined, don't recalculate them
                         unique_contacts = np.empty((0, 10))
-                        unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
+                        # unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
@@ -720,19 +725,12 @@ class Simulation:
                 X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
                 # this line will return a value error if the MaxNewtonIterAttainedError exception was handeled in update
 
-                prev_X = X
-                prev_AV = AV
-                prev_q = q
-                prev_u = u
-                prev_gNdot = gNdot
-                prev_gammaF = gammaF
-
-                self.q_save[self.leaves_counter,:,iter] = prev_q
-                self.u_save[self.leaves_counter,:,iter] = prev_u
-                self.X_save[self.leaves_counter,:,iter] = prev_X
-                self.gNdot_save[self.leaves_counter,:,iter] = prev_gNdot
-                self.gammaF_save[self.leaves_counter,:,iter] = prev_gammaF
-                self.AV_save[self.leaves_counter,:,iter] = prev_AV
+                self.q_save[self.leaves_counter,:,iter] = q
+                self.u_save[self.leaves_counter,:,iter] = u
+                self.X_save[self.leaves_counter,:,iter] = X
+                self.gNdot_save[self.leaves_counter,:,iter] = gNdot
+                self.gammaF_save[self.leaves_counter,:,iter] = gammaF
+                self.AV_save[self.leaves_counter,:,iter] = AV
 
                 # reset initial value
                 self.rho_infinity_initial = self.rho_inf 
@@ -746,13 +744,12 @@ class Simulation:
                 break   # this break is important 
             except Exception as e:
                 # f.write(f'Bifurcation branch did not pan out for leaf {leaves_counter} at {iter}\n') 
-                raise e
+                # raise e
+                self.save_arrays()
+                return X, AV, q, u, gNdot, gammaF
 
             iter = iter+1
-
-            
-            if iter%25 == 0:
-                self.save_arrays()
+            self.save_arrays()
 
         if increment_leaves == True:
 
@@ -766,7 +763,7 @@ class Simulation:
             #     f.write(f'Program quit because max number of leaves that is {max_leaves} was exceeded.\n')
             #     raise Exception
 
-        return
+        return X, AV, q, u, gNdot, gammaF
 
     def solve_bifurcation_ibi(self,iter_bif,*fixed_contact_region_params):
         self.bif_counter +=1
@@ -986,5 +983,20 @@ class Simulation:
 # test.solve_ibi()
 
 # hoop just sliding down, mu_s=1, u0 = np.array([-0.1, 0, 0, 0, 0, 0])
-test = Simulation(ntime = 2000, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
-test.solve_ibi()
+
+a=1
+R_hip = 0.2
+R_hoop = 0.2
+
+q0 = np.array([a+R_hip-R_hoop+0.1, 0, 0, 0, 0, 0])
+u0 = np.array([0, 0, 0, 0, 0, 10])
+X0 = 
+AV0 = 
+gNdot0 = 
+gammaF = 
+
+run1 = Simulation(ntime = 5, mu_s=10**8, mu_k=0.3, eN=0, eF=0, max_leaves=5, X0, AV0, q0, u0, gNdot0, gammaF0)
+X1, AV1, q1, u1, gNdot1, gammaF1 = run1.solve_ibi()
+
+run1 = Simulation(ntime = 5, mu_s=10**8, mu_k=0.3, eN=0, eF=0, max_leaves=5, X1, AV1, q1, u1, gNdot1, gammaF1)
+run1.solve_ibi(5)
