@@ -1,12 +1,13 @@
 # I will remove time tracking for now.
 
-
 import numpy as np
 import time
 import os
 import argparse
 from scipy.signal import argrelextrema
 import scipy.io
+from datetime import datetime
+import shutil
 
 # creating custom exceptions
 class MaxNewtonIterAttainedError(Exception):
@@ -43,8 +44,17 @@ class NoBifurcationConvergence(Exception):
 class Simulation:
     def __init__(self, ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5):
         # path for outputs
-        self.output_path = os.path.join(os.getcwd(), "outputs/multiple_solutions")  # Output path
+        # Generate timestamp
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        outputs_dir = f"outputs/{timestamp}"
+        self.output_path = os.path.join(os.getcwd(), outputs_dir)  # Output path
         os.makedirs(self.output_path, exist_ok=True)
+
+        # Path to the current file
+        current_file = os.path.realpath(__file__)
+        # Copy the file
+        shutil.copy2(current_file, self.output_path)
+
         # friction coefficients
         self.mu_s = mu_s    # Static friction coefficient
         self.mu_k = mu_k    # Kinetic friction coefficient
@@ -139,6 +149,7 @@ class Simulation:
         self.gNdot_save = np.zeros((1,self.nN,self.ntime))
         self.gammaF_save = np.zeros((1,self.nF,self.ntime))
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
+        self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
         # initial position
         q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         self.q_save[0,:,0] = q0
@@ -159,6 +170,9 @@ class Simulation:
 
         file_name_xbar_hip = str(f'{self.output_path}/xbar_hip.mat')
         scipy.io.savemat(file_name_xbar_hip,dict(xbar_hip=self.xbar_hip))
+
+        file_name_contacts = str(f'{self.output_path}/contacts.mat')
+        scipy.io.savemat(file_name_contacts,dict(contacts=self.contacts_save))
 
 
         np.save(f'{self.output_path}/q_save.npy', self.q_save)
@@ -549,6 +563,7 @@ class Simulation:
             try:
                 if fixed_contact_regions == True:
                     R, AV, q, u, gNdot, gammaF, J = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,fixed_contact)
+                    self.contacts_save[self.leaves_counter,:,iter] = fixed_contact
                 else:
                     R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
                     contacts = np.zeros((self.MAXITERn+1,3*self.nN+2*self.nN),dtype=int)
@@ -567,6 +582,7 @@ class Simulation:
                     else:
                         R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
                         contacts[nu,:] = contacts_nu
+                        
                     norm_R = np.linalg.norm(R,np.inf)
                     print(f"nu = {nu}")
                     print(f"norm(R) = {norm_R}")
@@ -576,6 +592,8 @@ class Simulation:
                         # (I am assuming this is happening because contact region is fixed, 
                         # update is being called from within solve_bifuration)
                         raise MaxNewtonIterAttainedError
+                    
+                self.contacts_save_save[self.leaves_counter,:,iter] = contacts_nu
                 
                 if nu == self.MAXITERn:
                     # print(f"No Convergence at iter = {iter} for nu = {nu} at rho_inf = {rho_inf}")
@@ -696,6 +714,8 @@ class Simulation:
         self.gammaF_save = np.vstack((self.gammaF_save,gammaF_save_addition))
         AV_save_addition = np.tile(self.AV_save[leaf,:,:],(1,1,1))
         self.AV_save = np.vstack((self.AV_save,AV_save_addition))
+        contacts_save_addition = np.tile(self.contacts_save[leaf,:,:],(1,1,1))
+        self.contacts_save = np.vstack((self.contacts_save,contacts_save_addition))
 
     def solve_ibi(self,iter_start=1):
         '''Solution iteration by iteration increment.'''
@@ -901,6 +921,7 @@ class Simulation:
                             self.gNdot_save = np.delete(self.gNdot_save,leaf,0)
                             self.gammaF_save = np.delete(self.gammaF_save,leaf,0)
                             self.AV_save = np.delete(self.AV_save,leaf,0)
+                            self.contacts_save = np.delete(self.contacts_save,leaf,0)
                             current_total_leaves = self.total_leaves-1
                             # g.write(f"  Leaf {leaf} in iteration {iter} is now deleted. The total number of leaves becomes {total_leaves}.\n")
                             self.solve_bbb(0,iter) # try starting at leaf, not at zero
@@ -949,7 +970,7 @@ class Simulation:
                     self.increment_saved_arrays(leaf)
                     leaf = self.total_leaves # we are now on a new leaf that is the last leaf
                     self.total_leaves+=1
-                    print(f'The current number of leaves was incremented to {total_leaves}.')
+                    print(f'The current number of leaves was incremented to {self.total_leaves}.')
                     # g.write(f"  A new leaf {leaf} was created at iteration {iter} so the total number of leaves is now increased to {total_leaves}.\n")
 
                 self.q_save[leaf,:,iter] = q

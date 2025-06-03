@@ -41,7 +41,7 @@ class NoBifurcationConvergence(Exception):
         super().__init__(self.message)
 
 class Simulation:
-    def __init__(self, ntime, mu_s, mu_k, eN, eF, max_leaves, X0, AV0, q0, u0, gNdot0, gammaF0):
+    def __init__(self, ntime, mu_s, mu_k, eN, eF, max_leaves, X_save, AV_save, q_save, u_save, gNdot_save, gammaF_save):
         # path for outputs
         self.output_path = os.path.join(os.getcwd(), "outputs/multiple_solutions")  # Output path
         os.makedirs(self.output_path, exist_ok=True)
@@ -133,21 +133,12 @@ class Simulation:
         self.unique_contacts_c = np.load(f'{unique_contacts_path}/unique_contacts_c.npy')
         self.unique_contacts_d = np.load(f'{unique_contacts_path}/unique_contacts_d.npy')
         # save arrays
-        self.q_save = np.zeros((1,self.ndof,self.ntime))
-        self.u_save = np.zeros((1,self.ndof,self.ntime))
-        self.X_save = np.zeros((1,self.nX,self.ntime))
-        self.gNdot_save = np.zeros((1,self.nN,self.ntime))
-        self.gammaF_save = np.zeros((1,self.nF,self.ntime))
-        self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
-        # initial position
-        self.q_save[0,:,0] = q0
-        # initial velocity
-        self.u_save[0,:,0] = u0
-        # other initial conditions
-        self.X_save[0,:,0] = X0
-        self.gNdot_save[0,:,0] = gNdot0
-        self.gammaF_save[0,:,0] = gammaF0
-        self.AV_save[0,:,0] = AV0
+        self.q_save = q_save
+        self.u_save = u_save
+        self.X_save = X_save
+        self.gNdot_save = gNdot_save
+        self.gammaF_save = gammaF_save
+        self.AV_save = AV_save
 
     def save_arrays(self):
         """Saving arrays."""
@@ -745,8 +736,9 @@ class Simulation:
             except Exception as e:
                 # f.write(f'Bifurcation branch did not pan out for leaf {leaves_counter} at {iter}\n') 
                 # raise e
+                print(f"error = {e}")
                 self.save_arrays()
-                return X, AV, q, u, gNdot, gammaF
+                return X_save, AV_save, q_save, u_save, gNdot_save, gammaF_save
 
             iter = iter+1
             self.save_arrays()
@@ -763,7 +755,7 @@ class Simulation:
             #     f.write(f'Program quit because max number of leaves that is {max_leaves} was exceeded.\n')
             #     raise Exception
 
-        return X, AV, q, u, gNdot, gammaF
+        return X_save, AV_save, q_save, u_save, gNdot_save, gammaF_save
 
     def solve_bifurcation_ibi(self,iter_bif,*fixed_contact_region_params):
         self.bif_counter +=1
@@ -823,8 +815,15 @@ class Simulation:
                             # we cannot update rho_inf anymore
                             # we need to abandon this leaf  
                             # g.write(f'bifurcation convergence failed\n')
-                            pass
-                            raise Exception
+                            # pass
+                            # raise Exception
+                            unique_contacts = np.empty((0, 10))
+                            # unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
+                            unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
+                            unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
+                            unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
+                            self.solve_bifurcation_ibi(iter,unique_contacts)
+                            return
                     # solve_bifurcation(iter_bif,unique_contacts) # maybe wrong, remove
                 else:
                     pass
@@ -987,16 +986,36 @@ class Simulation:
 a=1
 R_hip = 0.2
 R_hoop = 0.2
+ndof = 6
+ntime = 100
+
+ng = 0          # number of constraints at position level
+ngamma = 0      # number of constraints at velocity level
+nN = 2          # number of gap distance constraints
+nF = 4          # number of friction constraints
+gammaF_lim = np.array([[0,1],[2,3]])    # connectivities of friction and normal forces
+nX = 3*ndof+3*ng+2*ngamma+3*nN+2*nF     # total number of constraints with their derivative
 
 q0 = np.array([a+R_hip-R_hoop+0.1, 0, 0, 0, 0, 0])
 u0 = np.array([0, 0, 0, 0, 0, 10])
-X0 = 
-AV0 = 
-gNdot0 = 
-gammaF = 
+q_save = np.zeros((1,ndof,ntime))
+u_save = np.zeros((1,ndof,ntime))
+X_save = np.zeros((1,nX,ntime))
+gNdot_save = np.zeros((1,nN,ntime))
+gammaF_save = np.zeros((1,nF,ntime))
+AV_save = np.zeros((1,ndof+nN+nF,ntime))
+# initial position
+q_save[0,:,0] = q0
+# initial velocity
+u_save[0,:,0] = u0
 
-run1 = Simulation(ntime = 5, mu_s=10**8, mu_k=0.3, eN=0, eF=0, max_leaves=5, X0, AV0, q0, u0, gNdot0, gammaF0)
-X1, AV1, q1, u1, gNdot1, gammaF1 = run1.solve_ibi()
+run1 = Simulation(20, 1000, 0.3, 0, 0, 5, X_save, AV_save, q_save, u_save, gNdot_save, gammaF_save)
+X_save1, AV_save1, q_save1, u_save1, gNdot_save1, gammaF_save1 = run1.solve_ibi(1)
 
-run1 = Simulation(ntime = 5, mu_s=10**8, mu_k=0.3, eN=0, eF=0, max_leaves=5, X1, AV1, q1, u1, gNdot1, gammaF1)
-run1.solve_ibi(5)
+# works with 10**9
+# ms_s = 10 did no converge during the time I waited
+
+# run2 = Simulation(20, 2.5, 0.3, 0, 0, 5, X_save1, AV_save1, q_save1, u_save1, gNdot_save1, gammaF_save1)
+# X_save2, AV_save2, q_save2, u_save2, gNdot_save2, gammaF_save2 = run2.solve_ibi(5)
+
+print('end')
