@@ -64,7 +64,7 @@ class Simulation:
         # multiple solution parameters
         self.max_leaves = max_leaves
         self.bif_counter = 0
-        self.leaves_counter = 0 # used in ibi only (double checl)
+        self.leaves_counter = 0 # used in ibi only (double check)
         self.total_leaves = 1   # used in bbb only
         # nondimensionalization parameters
         l_nd = 1       # m, length nondimensionalization paramter
@@ -79,21 +79,21 @@ class Simulation:
         # hip properties
         self.R_hip = 0.2/l_nd            # radius of the hip, hip is circular
         # hip motion
-        omega = 1
-        a = 1
-        b = 1
-        x1bar_hip = a*np.cos(omega*self.t)
-        x2bar_hip = b*np.sin(omega*self.t)
-        self.xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
-        v1bar_hip = a*omega*np.cos(omega*self.t)
-        v2bar_hip = b*omega*np.sin(omega*self.t)
-        self.vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
-        a1bar_hip = a*omega**2*np.cos(omega*self.t)
-        a2bar_hip = b*omega**2*np.sin(omega*self.t)
-        self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
-        # self.xbar_hip = np.zeros((self.ntime,3))
-        # self.vbar_hip = np.zeros((self.ntime,3))
-        # self.abar_hip = np.zeros((self.ntime,3))
+        # omega = 1
+        # a = 1
+        # b = 1
+        # x1bar_hip = a*np.cos(omega*self.t)
+        # x2bar_hip = b*np.sin(omega*self.t)
+        # self.xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
+        # v1bar_hip = a*omega*np.cos(omega*self.t)
+        # v2bar_hip = b*omega*np.sin(omega*self.t)
+        # self.vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
+        # a1bar_hip = a*omega**2*np.cos(omega*self.t)
+        # a2bar_hip = b*omega**2*np.sin(omega*self.t)
+        # self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+        self.xbar_hip = np.zeros((self.ntime,3))
+        self.vbar_hip = np.zeros((self.ntime,3))
+        self.abar_hip = np.zeros((self.ntime,3))
         self.omega_hip = np.array([0,0,0])   # angular velocity of hip
         self.alpha_hip = np.array([0,0,0])   # angular acceleration of hip
         # hoop properties
@@ -151,11 +151,14 @@ class Simulation:
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
         self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
         # initial position
-        q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
+        # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
+        q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
         u0 = np.array([-0.1, 0, 0, 0, 0, 10])
         self.u_save[0,:,0] = u0
+        # array to keep track of bifurcations
+        self.bif_tracker = np.empty((0,2))
 
     def save_arrays(self):
         """Saving arrays."""
@@ -173,6 +176,9 @@ class Simulation:
 
         file_name_contacts = str(f'{self.output_path}/contacts.mat')
         scipy.io.savemat(file_name_contacts,dict(contacts=self.contacts_save))
+
+        file_name_bif_tracker = str(f'{self.output_path}/bif_tracker.mat')
+        scipy.io.savemat(file_name_bif_tracker,dict(bif_tracker=self.bif_tracker))
 
 
         np.save(f'{self.output_path}/q_save.npy', self.q_save)
@@ -223,6 +229,8 @@ class Simulation:
             min_indices = [0]
         # Find the minizing value of tau
         minimizing_tau = tau[min_indices]
+        minimizing_dh = dh[min_indices]
+
 
         return minimizing_tau
     
@@ -568,6 +576,7 @@ class Simulation:
                     R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
                     contacts = np.zeros((self.MAXITERn+1,3*self.nN+2*self.nN),dtype=int)
                     contacts[nu,:] = contacts_nu
+                    self.contacts_save[self.leaves_counter,:,iter] = contacts_nu
                 norm_R = np.linalg.norm(R,np.inf)
                 print(f"iter = {iter}. nu = {nu}")
                 print(f"norm(R) = {norm_R}")
@@ -582,6 +591,7 @@ class Simulation:
                     else:
                         R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
                         contacts[nu,:] = contacts_nu
+                        self.contacts_save[self.leaves_counter,:,iter] = contacts_nu
                         
                     norm_R = np.linalg.norm(R,np.inf)
                     print(f"nu = {nu}")
@@ -593,7 +603,6 @@ class Simulation:
                         # update is being called from within solve_bifuration)
                         raise MaxNewtonIterAttainedError
                     
-                self.contacts_save_save[self.leaves_counter,:,iter] = contacts_nu
                 
                 if nu == self.MAXITERn:
                     # print(f"No Convergence at iter = {iter} for nu = {nu} at rho_inf = {rho_inf}")
@@ -790,6 +799,8 @@ class Simulation:
 
     def solve_bifurcation_ibi(self,iter_bif,*fixed_contact_region_params):
         self.bif_counter +=1
+
+        self.bif_tracker = np.vstack([self.leaves_counter,iter_bif])
 
         # fixed_contact_regions = True
         unique_contacts = fixed_contact_region_params[0]
@@ -1002,10 +1013,10 @@ class Simulation:
 
 # hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
 # # Test ibi and bbb
-# test = Simulation(ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
-# test.solve_ibi()
-# test.solve_ibi()
-
-# hoop just sliding down, mu_s=1, u0 = np.array([-0.1, 0, 0, 0, 0, 0])
 test = Simulation(ntime = 2000, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
 test.solve_ibi()
+# test.solve_ibi()
+
+# # hoop just sliding down, mu_s=1, u0 = np.array([-0.1, 0, 0, 0, 0, 0])
+# test = Simulation(ntime = 2000, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
+# test.solve_ibi()
