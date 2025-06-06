@@ -2,15 +2,16 @@
 close all
 
 % EOM parameters
-m = 11;
-delta = linspace(0,0.01,m);
-alpha = linspace(0,0.4,m);
-beta = linspace(-0.01,0.001,m);
+% m = 11;
+% delta = linspace(0,0.01,m);
+% alpha = linspace(0,0.4,m);
+% beta = linspace(-0.01,0.001,m);
 
-% m = 1;
-% alpha = 0.4;
-% beta = 0.001;
-% delta = 0.001;
+
+m = 1;
+alpha = 0.4;
+beta = 0.001;
+delta = 0.001;
 
 [Delta, Alpha, Beta] = ndgrid(delta, alpha, beta);
 M = m^3;    % total parameter combinations
@@ -97,5 +98,5 @@ close(animation)
 function dydt = odefcn(tau,y,alpha,beta,delta)
   dydt = zeros(2,1);
   dydt(1) = y(2);
-  dydt(2) = -delta*y(2)-alpha*sin(y(1)-tau)+beta*sin(y(1)+tau);
+  dydt(2) = -delta*y(2)+alpha*sin(y(1)-tau)+beta*sin(y(1)+tau);
 end

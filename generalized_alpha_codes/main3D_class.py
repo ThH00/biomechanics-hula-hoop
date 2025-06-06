@@ -897,7 +897,8 @@ class Simulation:
 
                 try: 
 
-                    X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,leaf)
+                    self.leaves_counter = leaf
+                    X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
 
                     self.q_save[leaf,:,iter] = q
                     self.u_save[leaf,:,iter] = u
@@ -959,6 +960,8 @@ class Simulation:
 
         # print(f'Currently running solve_bifurcation at leaf {leaf}.')
 
+        self.leaves_counter = leaf
+
         prev_X = self.X_save[leaf,:,iter-1]
         prev_AV = self.AV_save[leaf,:,iter-1]
         prev_q = self.q_save[leaf,:,iter-1]
@@ -966,7 +969,7 @@ class Simulation:
         prev_gNdot = self.gNdot_save[leaf,:,iter-1]
         prev_gammaF = self.gammaF_save[leaf,:,iter-1]
 
-        unique_contacts,_ = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,leaf)
+        unique_contacts,_ = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
 
         n_unique_contacts = np.shape(unique_contacts)[0]
         nonconvergence_counter = 0 # number of nonconverged branches out of unique_contacts
@@ -975,7 +978,7 @@ class Simulation:
         for k in range(n_unique_contacts):
             try:
                 fixed_contact  = unique_contacts[k,:]
-                X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,leaf,fixed_contact)
+                X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,fixed_contact)
                 num_converged_leaves +=1
 
                 self.rho_infinity_initial = self.rho_inf
@@ -984,6 +987,7 @@ class Simulation:
                     self.increment_saved_arrays(leaf)
                     leaf = self.total_leaves # we are now on a new leaf that is the last leaf
                     self.total_leaves+=1
+                    self.leaves_counter = leaf
                     print(f'The current number of leaves was incremented to {self.total_leaves}.')
                     # g.write(f"  A new leaf {leaf} was created at iteration {iter} so the total number of leaves is now increased to {total_leaves}.\n")
 
