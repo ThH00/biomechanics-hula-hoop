@@ -597,7 +597,7 @@ class Simulation:
                     print(f"nu = {nu}")
                     print(f"norm(R) = {norm_R}")
 
-                    if norm_R>10**9:
+                    if norm_R>10**6:
                         # the Jacobian is blowing up
                         # (I am assuming this is happening because contact region is fixed, 
                         # update is being called from within solve_bifuration)
@@ -650,7 +650,7 @@ class Simulation:
                         return unique_contacts, do_not_unpack
                 return 
             except np.linalg.LinAlgError as e:
-                if norm_R>10**9:
+                if norm_R>10**6:
                     # the Jacobian is blowing up
                     # (I am assuming this is happening because contact region is fixed, 
                     # update is being called from within solve_bifuration)
@@ -661,7 +661,7 @@ class Simulation:
                     # increment rho_inf
                     try:        
                         self.update_rho_inf()
-                    except Exception as e:
+                    except Exception as e: # what do I want from this exactly??
                         if fixed_contact_regions == True:
                             keep_trying = False
                             return
@@ -779,9 +779,10 @@ class Simulation:
 
             iter = iter+1
 
-            
-            if iter%25 == 0:
-                self.save_arrays()
+            if iter == 826:
+                print(826)
+
+            self.save_arrays()
 
         if increment_leaves == True:
 
@@ -874,6 +875,8 @@ class Simulation:
 
         leaf = leaf_start
         iter = iter_start
+
+        self.bif_tracker = np.vstack([leaf,iter])
 
         while iter<self.ntime:
             print(f"iteration {iter}")
@@ -1014,8 +1017,9 @@ class Simulation:
 # hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
 # # Test ibi and bbb
 test = Simulation(ntime = 2000, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
-test.solve_ibi()
-# test.solve_ibi()
+test.solve_bbb()
+# test.solve_ibi() I think this had an infinite loop at 827
+# I want the code to be able to go back and track next leaf in this case
 
 # # hoop just sliding down, mu_s=1, u0 = np.array([-0.1, 0, 0, 0, 0, 0])
 # test = Simulation(ntime = 2000, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)

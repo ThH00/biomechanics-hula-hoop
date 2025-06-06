@@ -1,9 +1,12 @@
 E1 = [1,0];
 E2 = [0,1];
 
-delta = 0;
-alpha = 1;
-beta = 1;
+alpha = 0.4;
+beta = 0.001;
+delta = 0.001;
+
+% omega = 1;
+% m = 1;
 
 R = 1.6;    % hoop radius
 r = 0.4;    % hip radius
