@@ -547,7 +547,7 @@ class Simulation:
 
         return R, AV, q, u, gNdot, gammaF, J, contacts_nu
 
-    def update(self,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
+    def update(self,leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact):
         """Takes components at time t and return values at time t+dt"""
 
         nu = 0
@@ -558,7 +558,7 @@ class Simulation:
 
         contacts = np.zeros((self.MAXITERn+1,3*self.nN+2*self.nN),dtype=int)
         contacts[nu,:] = contacts_nu
-        self.contacts_save[self.leaves_counter,:,iter] = contacts_nu
+        self.contacts_save[leaf,:,iter] = contacts_nu
 
         norm_R = np.linalg.norm(R,np.inf)
         print(f"norm(R) = {norm_R}")
@@ -574,7 +574,7 @@ class Simulation:
                 R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact[0])
                 
                 contacts[nu,:] = contacts_nu
-                self.contacts_save[self.leaves_counter,:,iter] = contacts_nu
+                self.contacts_save[leaf,:,iter] = contacts_nu
                     
                 norm_R = np.linalg.norm(R,np.inf)
                 print(f"nu = {nu}")
@@ -638,20 +638,41 @@ class Simulation:
         self.save_arrays()
 
         # increment saved arrays
-        q_save_addition = np.tile(self.q_save[leaf,:,:],(1,1,1))
-        self.q_save = np.vstack((self.q_save,q_save_addition))
-        u_save_addition = np.tile(self.u_save[leaf,:,:],(1,1,1))
-        self.u_save = np.vstack((self.u_save,u_save_addition))
-        X_save_addition = np.tile(self.X_save[leaf,:,:],(1,1,1))
-        self.X_save = np.vstack((self.X_save,X_save_addition))
-        gNdot_save_addition = np.tile(self.gNdot_save[leaf,:,:],(1,1,1))
-        self.gNdot_save = np.vstack((self.gNdot_save,gNdot_save_addition))
-        gammaF_save_addition = np.tile(self.gammaF_save[leaf,:,:],(1,1,1))
-        self.gammaF_save = np.vstack((self.gammaF_save,gammaF_save_addition))
-        AV_save_addition = np.tile(self.AV_save[leaf,:,:],(1,1,1))
-        self.AV_save = np.vstack((self.AV_save,AV_save_addition))
-        contacts_save_addition = np.tile(self.contacts_save[leaf,:,:],(1,1,1))
-        self.contacts_save = np.vstack((self.contacts_save,contacts_save_addition))
+        
+        q_save_addition = np.tile(self.q_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
+        self.q_save = np.insert(self.q_save, leaf + 1, q_save_addition, axis=0)
+        # q_save_addition = np.tile(self.q_save[leaf,:,:],(1,1,1))
+        # self.q_save = np.vstack((self.q_save,q_save_addition))
+
+        u_save_addition = np.tile(self.u_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
+        self.u_save = np.insert(self.u_save, leaf + 1, u_save_addition, axis=0)
+        # u_save_addition = np.tile(self.u_save[leaf,:,:],(1,1,1))
+        # self.u_save = np.vstack((self.u_save,u_save_addition))
+
+        X_save_addition = np.tile(self.X_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
+        self.X_save = np.insert(self.X_save, leaf + 1, X_save_addition, axis=0)
+        # X_save_addition = np.tile(self.X_save[leaf,:,:],(1,1,1))
+        # self.X_save = np.vstack((self.X_save,X_save_addition))
+
+        gNdot_save_addition = np.tile(self.gNdot_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
+        self.gNdot_save = np.insert(self.gNdot_save, leaf + 1, gNdot_save_addition, axis=0)
+        # gNdot_save_addition = np.tile(self.gNdot_save[leaf,:,:],(1,1,1))
+        # self.gNdot_save = np.vstack((self.gNdot_save,gNdot_save_addition))
+
+        gammaF_save_addition = np.tile(self.gammaF_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
+        self.gammaF_save = np.insert(self.gammaF_save, leaf + 1, gammaF_save_addition, axis=0)
+        # gammaF_save_addition = np.tile(self.gammaF_save[leaf,:,:],(1,1,1))
+        # self.gammaF_save = np.vstack((self.gammaF_save,gammaF_save_addition))
+
+        AV_save_addition = np.tile(self.AV_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
+        self.AV_save = np.insert(self.AV_save, leaf + 1, AV_save_addition, axis=0)
+        # AV_save_addition = np.tile(self.AV_save[leaf,:,:],(1,1,1))
+        # self.AV_save = np.vstack((self.AV_save,AV_save_addition))
+
+        contacts_save_addition = np.tile(self.contacts_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
+        self.contacts_save = np.insert(self.contacts_save, leaf + 1, contacts_save_addition, axis=0)
+        # contacts_save_addition = np.tile(self.contacts_save[leaf,:,:],(1,1,1))
+        # self.contacts_save = np.vstack((self.contacts_save,contacts_save_addition))
     
     def solve_open_contact(self, iter, leaf):
         '''checking for no contact'''
@@ -665,7 +686,7 @@ class Simulation:
 
         open_contact = np.zeros(1,10)
 
-        X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,open_contact)
+        X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,open_contact)
         
         # calculate residual with these values
         R, _, _, _, _, _, A, B, C, D, E = self.get_R(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
@@ -703,7 +724,7 @@ class Simulation:
             contact = unique_contacts[i,:]
 
             try:
-                X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,contact)
+                X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,contact)
 
                 convergence_counter += 1
 
@@ -720,12 +741,13 @@ class Simulation:
                     self.increment_saved_arrays(leaf)
                     # increment at end of saved arrays
                     self.total_leaves += 1
-                    self.q_save[self.total_leaves,:,iter] = q
-                    self.u_save[self.total_leaves,:,iter] = u
-                    self.X_save[self.total_leaves,:,iter] = X
-                    self.gNdot_save[self.total_leaves,:,iter] = gNdot
-                    self.gammaF_save[self.total_leaves,:,iter] = gammaF
-                    self.AV_save[self.total_leaves,:,iter] = AV
+                    leaf += 1
+                    self.q_save[leaf,:,iter] = q
+                    self.u_save[leaf,:,iter] = u
+                    self.X_save[leaf,:,iter] = X
+                    self.gNdot_save[leaf,:,iter] = gNdot
+                    self.gammaF_save[leaf,:,iter] = gammaF
+                    self.AV_save[leaf,:,iter] = AV
 
                 self.save_arrays()
                 print(f'Success.')
@@ -737,8 +759,7 @@ class Simulation:
             print(f"Solution 1 did not work. None of the leaves converged.")
             raise NoBifurcationConvergence
         else:
-            self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
-            return
+            return convergence_counter
 
     def time_update(self, iter, leaf):
 
@@ -750,7 +771,7 @@ class Simulation:
         prev_gammaF = self.gammaF_save[leaf,:,iter-1]
 
         try:
-            X,AV,q,u,gNdot,gammaF = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
+            X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
 
             self.q_save[leaf,:,iter] = q
             self.u_save[leaf,:,iter] = u
@@ -760,24 +781,36 @@ class Simulation:
             self.AV_save[leaf,:,iter] = AV
             self.save_arrays()
 
-            print(f'Success.')
+            print(f'Success. No issues. feaf = {leaf}. iter = {iter}.')
 
-            return
+            convergence_counter = 1
+            return convergence_counter
 
         except ValueError as e:
 
-            unique_contacts,_ = self.update(iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
+            unique_contacts,_ = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
 
             try:
                 # solution 0: checking for no contact
                 self.solve_open_contact(iter,leaf)
+
+                print(f'Success. Open contact. leaf = {leaf}. iter = {iter}.')
+
+                convergence_counter = 1
+                return convergence_counter
+
             except:
                 print(f"Solution 0 did not work. Contact is not open.")
                 print(f"Loop over attained contact configurations with closed contact.")
 
                 try:
                     # solution 1: looping over attained contact configs
-                    self.solve_fixed_contacts(iter,leaf,unique_contacts)
+                    convergence_counter = self.solve_fixed_contacts(iter,leaf,unique_contacts)
+
+                    print(f'Success. Looped over attained contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
+
+                    convergence_counter = 1
+                    return convergence_counter
                     
                 except:
                     print(f"Solution 1 did not work. None of the attained contact regions converged.")
@@ -791,7 +824,12 @@ class Simulation:
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
 
-                        self.solve_fixed_contacts(iter,leaf,unique_contacts)
+                        convergence_counter = self.solve_fixed_contacts(iter,leaf,unique_contacts)
+
+                        print(f'Success. Looped over all possible contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
+
+                        convergence_counter = 1
+                        return convergence_counter
 
                     except:
                         # delete leaf that did not converge: decrement saved arrays
@@ -808,28 +846,30 @@ class Simulation:
                         # solution: increment maxitern
                         # solution: increment rho_inf
                         # self.update_rho_inf()
+
+                        convergence_counter = 0
+                        return convergence_counter
                             
-
     def solve_A(self):
-
         leaf = 0
         iter = 0
 
         while leaf <= self.total_leaves:
             while iter < self.ntime:
-                self.time_update(iter, leaf)
-                iter += 1
+                convergence_counter = self.time_update(iter, leaf)
+                self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
+                iter += convergence_counter
             leaf += 1
 
     def solve_B(self):
-
         leaf = 0
         iter = 0
 
         while iter <= self.ntime:
             while leaf < self.total_leaves:
-                self.time_update(iter, leaf)
-                leaf += 1
+                convergence_counter = self.time_update(iter, leaf)
+                self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
+                leaf += convergence_counter
             iter += 1
 
 # # update initial value
