@@ -3,6 +3,8 @@ alpha = 0.4;
 beta = 0.004;
 delta = 0.001;
 
+% syms alpha beta delta real
+
 t0_vals = linspace(0, 2*pi, 500);  % range of t0 values
 
 % Homoclinic orbit:

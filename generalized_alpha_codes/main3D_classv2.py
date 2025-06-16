@@ -17,6 +17,12 @@ class MaxNewtonIterAttainedError(Exception):
         self.message = message
         super().__init__(self.message)
 
+class NoOpenContactError(Exception):
+    """Contact is not open."""
+    def __init__(self, message="This exception is raised when the contact is not open."):
+        self.message = message
+        super().__init__(self.message)
+
 class RhoInfInfiniteLoop(Exception):
     """This exception is raised when we have possibly entered in an infinite loop through updating rho_inf."""
     def __init__(self, message="This exception is raised when we have possibly entered in an infinite loop through updating rho_inf."):
@@ -521,10 +527,11 @@ class Simulation:
         '''Calculate the Jacobian manually.'''
 
         epsilon = 1e-6
+        fixed_contact = np.squeeze(fixed_contact)
 
-        if fixed_contact != ():
+        if fixed_contact.size > 0:
             # here, the contact is fixed if a solve_bifurcation is being run
-            contacts_nu = fixed_contact[0]
+            contacts_nu = fixed_contact
             A = contacts_nu[0:self.nN]
             B = contacts_nu[self.nN:2*self.nN]
             C = contacts_nu[2*self.nN:3*self.nN]
@@ -571,7 +578,7 @@ class Simulation:
                 # Calculate new EOM and residual
                 nu = nu+1
 
-                R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact[0])
+                R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,fixed_contact)
                 
                 contacts[nu,:] = contacts_nu
                 self.contacts_save[leaf,:,iter] = contacts_nu
@@ -591,12 +598,20 @@ class Simulation:
             return X,AV,q,u,gNdot,gammaF
         
         except (JacobianBlowingUpError,MaxNewtonIterAttainedError) as e:
-            unique_contacts = np.unique(contacts, axis=0)
-            # because if the number of contact regions is 6 which is the original number
-            do_not_unpack = True
-            return unique_contacts, do_not_unpack
+            if fixed_contact == ():
+                unique_contacts = np.unique(contacts, axis=0)
+                # because if the number of contact regions is 6 which is the original number
+                do_not_unpack = True
+                return unique_contacts, do_not_unpack
+            else:
+                raise e
         
-        except e:
+        except np.linalg.LinAlgError as e:
+            # maybe update rho_inf here
+            raise e
+        
+        except Exception as e:
+            print(e)
             raise e
         
     def update_rho_inf(self):
@@ -684,14 +699,18 @@ class Simulation:
         prev_gNdot = self.gNdot_save[leaf,:,iter-1]
         prev_gammaF = self.gammaF_save[leaf,:,iter-1]
 
-        open_contact = np.zeros(1,10)
+        open_contact = np.zeros(10)
 
-        X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,open_contact)
-        
+        try:
+            X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,open_contact)
+        except (np.linalg.LinAlgError, JacobianBlowingUpError, MaxNewtonIterAttainedError) as e:
+            print(e)
+            raise NoOpenContactError
+            
         # calculate residual with these values
         R, _, _, _, _, _, A, B, C, D, E = self.get_R(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF)
         output_contacts = np.concatenate((A,B,C,D,E),axis=None)
-        if np.abs(np.linalg.norm(R,np.inf))>self.tol_n and output_contacts==open_contact:
+        if np.abs(np.linalg.norm(R,np.inf))<self.tol_n and (output_contacts==open_contact).all():
             self.q_save[leaf,:,iter] = q
             self.u_save[leaf,:,iter] = u
             self.X_save[leaf,:,iter] = X
@@ -702,6 +721,9 @@ class Simulation:
 
             print(f'The contacts are all open.')
             return
+        else:
+            raise NoOpenContactError
+        
         
     def solve_fixed_contacts(self, iter, leaf, unique_contacts):
         '''Solving for a set of fixed contact regions.'''
@@ -726,9 +748,7 @@ class Simulation:
             try:
                 X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,contact)
 
-                convergence_counter += 1
-
-                if nonconvergence_counter == 1:
+                if convergence_counter == 0:
                     print(f'This is the first converged leaf. Do not increment saved arrays.')
                     self.q_save[leaf,:,iter] = q
                     self.u_save[leaf,:,iter] = u
@@ -749,10 +769,12 @@ class Simulation:
                     self.gammaF_save[leaf,:,iter] = gammaF
                     self.AV_save[leaf,:,iter] = AV
 
+                convergence_counter += 1
+
                 self.save_arrays()
                 print(f'Success.')
 
-            except:
+            except (np.linalg.LinAlgError, JacobianBlowingUpError, MaxNewtonIterAttainedError) as e:
                 nonconvergence_counter += 1
 
         if nonconvergence_counter == n_unique_contacts:
@@ -781,10 +803,40 @@ class Simulation:
             self.AV_save[leaf,:,iter] = AV
             self.save_arrays()
 
-            print(f'Success. No issues. feaf = {leaf}. iter = {iter}.')
+            print(f'Success. No issues. leaf = {leaf}. iter = {iter}.')
 
             convergence_counter = 1
             return convergence_counter
+        
+        except np.linalg.LinAlgError as e:
+            print(e)
+
+            try:
+                # solution 2: looping over all possible contact configs
+                unique_contacts = np.empty((0, 10))
+                # unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
+                unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
+                unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
+                unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
+
+                convergence_counter = self.solve_fixed_contacts(iter,leaf,unique_contacts)
+
+                print(f'Success. Looped over all possible contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
+
+                convergence_counter = 1
+                return convergence_counter
+        
+            except Exception as e:
+                print(e)
+                self.delete_leaf(leaf)
+
+                print(f"I need to implement increasing maxiter_n or increasing rho_inf.")
+                # solution: increment maxitern
+                # solution: increment rho_inf
+                # self.update_rho_inf()
+
+                convergence_counter = 0
+                return convergence_counter
 
         except ValueError as e:
 
@@ -799,7 +851,8 @@ class Simulation:
                 convergence_counter = 1
                 return convergence_counter
 
-            except:
+            except Exception as e:
+                print(e)
                 print(f"Solution 0 did not work. Contact is not open.")
                 print(f"Loop over attained contact configurations with closed contact.")
 
@@ -809,17 +862,17 @@ class Simulation:
 
                     print(f'Success. Looped over attained contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
 
-                    convergence_counter = 1
                     return convergence_counter
                     
-                except:
+                except Exception as e:
+                    print(e)
                     print(f"Solution 1 did not work. None of the attained contact regions converged.")
                     print(f"Loop over attained contact configurations with closed contact.")
 
                     try:
                         # solution 2: looping over all possible contact configs
                         unique_contacts = np.empty((0, 10))
-                        unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
+                        # unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_c])
                         unique_contacts = np.vstack([unique_contacts,self.unique_contacts_d])
@@ -828,19 +881,11 @@ class Simulation:
 
                         print(f'Success. Looped over all possible contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
 
-                        convergence_counter = 1
                         return convergence_counter
 
-                    except:
-                        # delete leaf that did not converge: decrement saved arrays
-                        self.q_save = np.delete(self.q_save,leaf,0)
-                        self.u_save = np.delete(self.u_save,leaf,0)
-                        self.X_save = np.delete(self.X_save,leaf,0)
-                        self.gNdot_save = np.delete(self.gNdot_save,leaf,0)
-                        self.gammaF_save = np.delete(self.gammaF_save,leaf,0)
-                        self.AV_save = np.delete(self.AV_save,leaf,0)
-                        self.contacts_save = np.delete(self.contacts_save,leaf,0)
-                        self.total_leaves = self.total_leaves-1
+                    except Exception as e:
+                        print(e)
+                        self.delete_leaf(leaf)
 
                         print(f"I need to implement increasing maxiter_n or increasing rho_inf.")
                         # solution: increment maxitern
@@ -849,21 +894,32 @@ class Simulation:
 
                         convergence_counter = 0
                         return convergence_counter
+                    
+    def delete_leaf(self,leaf):
+        ''' delete leaf that did not converge: decrement saved arrays'''
+        self.q_save = np.delete(self.q_save,leaf,0)
+        self.u_save = np.delete(self.u_save,leaf,0)
+        self.X_save = np.delete(self.X_save,leaf,0)
+        self.gNdot_save = np.delete(self.gNdot_save,leaf,0)
+        self.gammaF_save = np.delete(self.gammaF_save,leaf,0)
+        self.AV_save = np.delete(self.AV_save,leaf,0)
+        self.contacts_save = np.delete(self.contacts_save,leaf,0)
+        self.total_leaves = self.total_leaves-1
                             
     def solve_A(self):
         leaf = 0
-        iter = 0
+        iter = 1
 
         while leaf <= self.total_leaves:
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
-                iter += convergence_counter
-            leaf += 1
+                iter += 1
+            leaf += convergence_counter
 
     def solve_B(self):
         leaf = 0
-        iter = 0
+        iter = 1
 
         while iter <= self.ntime:
             while leaf < self.total_leaves:

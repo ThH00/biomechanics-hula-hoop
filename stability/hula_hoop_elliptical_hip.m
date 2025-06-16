@@ -77,6 +77,7 @@ colormap('parula')
 cmap = parula(n);     % color with a uniform map
 
 tspan = linspace(0,50,1000);
+xlim([0,2*pi])
 
 for i = 1:n
 
@@ -90,6 +91,7 @@ for i = 1:n
     xlabel('phi')
     ylabel('phi-prime')
     plot(xi,xiprime,'.','LineWidth',1,'Color',cmap(i,:))
+    xlim([0,2*pi])
 
 end
 
