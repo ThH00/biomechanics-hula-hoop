@@ -170,7 +170,7 @@ class Simulation:
         self.bif_tracker = np.empty((0,2))
         
         # creating an output file f to log major happenings
-        f = open(f"{current_file}/log_file.txt",'a')
+        self.f = open(f"{self.output_path}/log_file.txt",'a')
 
     def save_arrays(self):
         """Saving arrays."""
@@ -945,6 +945,7 @@ class Simulation:
 
         while leaf <= self.total_leaves:
             self.f.write(f"  Increment leaf = {leaf}. iter = {iter}.")
+            iter = 0
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
@@ -957,6 +958,7 @@ class Simulation:
 
         while iter <= self.ntime:
             self.f.write(f"  Increment iter = {iter}. leaf = {leaf}.")
+            leaf = 0
             while leaf < self.total_leaves:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
