@@ -168,6 +168,9 @@ class Simulation:
         self.total_leaves = 0
         # array to keep track of bifurcations
         self.bif_tracker = np.empty((0,2))
+        
+        # creating an output file f to log major happenings
+        f = open(f"{current_file}/log_file.txt",'a')
 
     def save_arrays(self):
         """Saving arrays."""
@@ -558,7 +561,8 @@ class Simulation:
         """Takes components at time t and return values at time t+dt"""
 
         nu = 0
-        print(f"iter = {iter}. nu = {nu}")
+        print(f"Update is called for iter = {iter} and leaf = {leaf}")
+        self.f.write(f"Update is called for iter = {iter} and leaf = {leaf}")
         
         X = prev_X
         R, AV, q, u, gNdot, gammaF, J, contacts_nu = self.get_R_J(iter,X,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,*fixed_contact)
@@ -593,6 +597,7 @@ class Simulation:
                     raise JacobianBlowingUpError
                 
             if nu == self.MAXITERn:
+                self.f.write(f"  Raising MaxNewtonIterAttainedError")
                 raise MaxNewtonIterAttainedError
         
             return X,AV,q,u,gNdot,gammaF
@@ -608,18 +613,22 @@ class Simulation:
         
         except np.linalg.LinAlgError as e:
             # maybe update rho_inf here
+            self.f.write(f"  Raising np.linalg.LinAlgError")
             raise e
         
         except Exception as e:
             print(e)
+            self.f.write(f"  Raising exception {e}")
             raise e
         
     def update_rho_inf(self):
         '''Update the numerical parameter rho_inf.'''
         self.rho_inf = self.rho_inf+0.05  #0.01
         print(self.rho_inf)
+        self.f.write(f"  Updating rho_inf to {self.rho_inf}")
         if np.abs(self.rho_inf - self.rho_infinity_initial) < 0.001:
             print("possibility of infinite loop")
+            self.f.write(f"  Raising RhoInfInfiniteLoop error")
             raise RhoInfInfiniteLoop
         if self.rho_inf > 1.001:
             self.rho_inf = 0
@@ -649,6 +658,8 @@ class Simulation:
 
     def increment_saved_arrays(self,leaf):
         '''Increment saved arrays due to a bifurcation.'''
+
+        self.f.write(f"  Saved arrays are incremented at leaf={leaf}.")
         
         self.save_arrays()
 
@@ -692,6 +703,8 @@ class Simulation:
     def solve_open_contact(self, iter, leaf):
         '''checking for no contact'''
 
+        self.f.write(f"  Checking for open contact.")
+
         prev_X = self.X_save[leaf,:,iter-1]
         prev_AV = self.AV_save[leaf,:,iter-1]
         prev_q = self.q_save[leaf,:,iter-1]
@@ -705,6 +718,7 @@ class Simulation:
             X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,open_contact)
         except (np.linalg.LinAlgError, JacobianBlowingUpError, MaxNewtonIterAttainedError) as e:
             print(e)
+            self.f.write(f"  Error {e} raised. The contact is not open.")
             raise NoOpenContactError
             
         # calculate residual with these values
@@ -722,6 +736,7 @@ class Simulation:
             print(f'The contacts are all open.')
             return
         else:
+            self.f.write(f"  Raised NoOpenContactError. The contact is not open.")
             raise NoOpenContactError
         
         
@@ -738,6 +753,8 @@ class Simulation:
         # remove rows that are all zeros (in case there are any)
         unique_contacts = unique_contacts[~np.all(unique_contacts == 0, axis=1)]
         n_unique_contacts = np.shape(unique_contacts)[0]
+
+        self.f.write(f"  Solving for fixed contacts at iter = {iter}, leaf = {leaf} and n_unique_contacts = {n_unique_contacts}.")
                     
         convergence_counter = 0
         nonconvergence_counter = 0
@@ -749,6 +766,7 @@ class Simulation:
                 X,AV,q,u,gNdot,gammaF = self.update(leaf,iter,prev_X,prev_AV,prev_q,prev_u,prev_gNdot,prev_gammaF,contact)
 
                 if convergence_counter == 0:
+                    self.f.write(f"  Convergence! This is the first converged leaf. Do not increment saved arrays.")
                     print(f'This is the first converged leaf. Do not increment saved arrays.')
                     self.q_save[leaf,:,iter] = q
                     self.u_save[leaf,:,iter] = u
@@ -757,6 +775,7 @@ class Simulation:
                     self.gammaF_save[leaf,:,iter] = gammaF
                     self.AV_save[leaf,:,iter] = AV
                 else:
+                    self.f.write(f"  Convergence! Increment saved arrays.")
                     print(f'Increment saved arrays.')
                     self.increment_saved_arrays(leaf)
                     # increment at end of saved arrays
@@ -775,15 +794,19 @@ class Simulation:
                 print(f'Success.')
 
             except (np.linalg.LinAlgError, JacobianBlowingUpError, MaxNewtonIterAttainedError) as e:
+                self.f.write(f"  This leaf did not converge.  The error {e} was raised.")
                 nonconvergence_counter += 1
 
         if nonconvergence_counter == n_unique_contacts:
+            self.f.write(f"  None of the leaves conveged. Raised NoBifurcationConvergence error.")
             print(f"Solution 1 did not work. None of the leaves converged.")
             raise NoBifurcationConvergence
         else:
             return convergence_counter
 
     def time_update(self, iter, leaf):
+
+        self.f.write(f"Running time update at iter = {iter}, leaf = {leaf}.")
 
         prev_X = self.X_save[leaf,:,iter-1]
         prev_AV = self.AV_save[leaf,:,iter-1]
@@ -803,16 +826,19 @@ class Simulation:
             self.AV_save[leaf,:,iter] = AV
             self.save_arrays()
 
+            self.f.write(f'Success. No issues. leaf = {leaf}. iter = {iter} converged.')
             print(f'Success. No issues. leaf = {leaf}. iter = {iter}.')
 
             convergence_counter = 1
             return convergence_counter
         
         except np.linalg.LinAlgError as e:
+            self.f.write(f'Raised np.linalg.LinAlgError')
             print(e)
 
             try:
                 # solution 2: looping over all possible contact configs
+                self.f.write(f'  Looping over all possible contact configs.')
                 unique_contacts = np.empty((0, 10))
                 # unique_contacts = np.vstack([unique_contacts,self.unique_contacts_a])
                 unique_contacts = np.vstack([unique_contacts,self.unique_contacts_b])
@@ -821,12 +847,13 @@ class Simulation:
 
                 convergence_counter = self.solve_fixed_contacts(iter,leaf,unique_contacts)
 
+                self.f.write(f'  Success. Looped over all possible contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
                 print(f'Success. Looped over all possible contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
 
-                convergence_counter = 1
                 return convergence_counter
         
             except Exception as e:
+                self.f.write(f'  Raised error {e}. Deleting leaf = {leaf}.')
                 print(e)
                 self.delete_leaf(leaf)
 
@@ -846,6 +873,7 @@ class Simulation:
                 # solution 0: checking for no contact
                 self.solve_open_contact(iter,leaf)
 
+                self.f.write(f'  Success. Open contact. leaf = {leaf}. iter = {iter}.')
                 print(f'Success. Open contact. leaf = {leaf}. iter = {iter}.')
 
                 convergence_counter = 1
@@ -855,11 +883,13 @@ class Simulation:
                 print(e)
                 print(f"Solution 0 did not work. Contact is not open.")
                 print(f"Loop over attained contact configurations with closed contact.")
+                self.f.write(f'  Contact is not open. Loop over attained contact configurations with closed contact.')
 
                 try:
                     # solution 1: looping over attained contact configs
                     convergence_counter = self.solve_fixed_contacts(iter,leaf,unique_contacts)
 
+                    self.f.write(f'  Success. Looped over attained contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
                     print(f'Success. Looped over attained contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
 
                     return convergence_counter
@@ -868,6 +898,7 @@ class Simulation:
                     print(e)
                     print(f"Solution 1 did not work. None of the attained contact regions converged.")
                     print(f"Loop over attained contact configurations with closed contact.")
+                    self.f.write(f"  None of the attained contact regions converged. Loop over attained contact configurations with closed contact.")
 
                     try:
                         # solution 2: looping over all possible contact configs
@@ -879,6 +910,7 @@ class Simulation:
 
                         convergence_counter = self.solve_fixed_contacts(iter,leaf,unique_contacts)
 
+                        self.f.write(f"  Success. Looped over all possible contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.")
                         print(f'Success. Looped over all possible contact configs. leaf = {leaf}. iter = {iter}. convergence_counter = {convergence_counter}.')
 
                         return convergence_counter
@@ -886,6 +918,7 @@ class Simulation:
                     except Exception as e:
                         print(e)
                         self.delete_leaf(leaf)
+                        self.f.write(f"  Raised error {e}. Deleted leaf = {leaf}.")
 
                         print(f"I need to implement increasing maxiter_n or increasing rho_inf.")
                         # solution: increment maxitern
@@ -911,6 +944,7 @@ class Simulation:
         iter = 1
 
         while leaf <= self.total_leaves:
+            self.f.write(f"  Increment leaf = {leaf}. iter = {iter}.")
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
@@ -922,6 +956,7 @@ class Simulation:
         iter = 1
 
         while iter <= self.ntime:
+            self.f.write(f"  Increment iter = {iter}. leaf = {leaf}.")
             while leaf < self.total_leaves:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
