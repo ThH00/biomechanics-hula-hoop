@@ -8,6 +8,7 @@ from scipy.signal import argrelextrema
 import scipy.io
 from datetime import datetime
 import shutil
+import contact_constraints
 
 # creating custom exceptions
 class MaxNewtonIterAttainedError(Exception):
@@ -177,10 +178,10 @@ class Simulation:
         self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
         # initial position
         # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
-        q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
+        q0 = np.array([0, self.R_hip-self.R_hoop, 0, np.pi/2, np.pi/2, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([-0.1, 0, 0, 0, 0, 10])
+        u0 = np.array([0, 0, 0, 0, 0, 10])
         self.u_save[0,:,0] = u0
         # multiple solution parameters
         self.total_leaves = 0
@@ -274,61 +275,6 @@ class Simulation:
 
         return minimizing_tau
     
-    def get_contact_constraints(self, q_hoop,u_hoop,a_hoop,tau,q_hip,u_hip,a_hip):
-        '''Get gap distance, slip speed functions and their gradients and derivatives at each contact'''
-        # center of hoop
-        xbar_hoop = q_hoop[:3]
-        vbar_hoop = u_hoop[:3]
-        abar_hoop = a_hoop[:3]
-        # Euler angles of hoop
-        psi_hoop = q_hoop[3]
-        theta_hoop = q_hoop[4]
-        phi_hoop = q_hoop[5]
-        psidot_hoop = u_hoop[3]
-        thetadot_hoop = u_hoop[4]
-        phidot_hoop = u_hoop[5]
-        psiddot_hoop = a_hoop[3]
-        thetaddot_hoop = a_hoop[4]
-        phiddot_hoop = a_hoop[5]
-        
-        # center of hip
-        xbar_hip = q_hip[:3]
-        vbar_hip = u_hip[:3]
-        abar_hip = a_hip[:3]
-        # Euler angles of hip
-        psi_hip = q_hip[3]
-        theta_hip = q_hip[4]
-        phi_hip = q_hip[5]
-        psidot_hip = u_hip[3]
-        thetadot_hip = u_hip[4]
-        phidot_hip = u_hip[5]
-        psiddot_hip = a_hip[3]
-        thetaddot_hip = a_hip[4]
-        phiddot_hip = a_hip[5]
-        
-        WN = np.zeros(self.ndof)
-        WF = np.zeros((self.ndof,2))
-
-        # import
-
-        gN = 
-        gNdot = 
-        gNddot = 
-
-        gammaF1 = 
-        gammadotF1 = 
-        gammaF2 = 
-        gammadotF2 = 
-
-        WN[]...
-        WF[]...
-
-        
-        gammaF = np.array([gammaF1, gammaF2])
-        gammadotF = np.array([gammadotF1, gammadotF2])
-        
-        return gN, gNdot, gNddot, WN, gammaF, gammadotF, WF
-    
     def combine_contact_constraints(self,iter,q_hoop,u_hoop,a_hoop):
         ''' Combine all gap distance, slip speed functions and the gradients and derivatives from both contacts.'''
 
@@ -348,14 +294,14 @@ class Simulation:
         WF = np.zeros((self.ndof, self.nF))
 
         if np.size(tau) == 2:  # two local minima
-            gN[1], gNdot[1], gNddot[1], WN[:,1], gammaF[self.gammaF_lim[1,:]], gammadotF[self.gammaF_lim[1,:]], WF[:,self.gammaF_lim[1,:]] = self.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[1],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
-            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = self.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.a_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
+            gN[1], gNdot[1], gNddot[1], WN[:,1], gammaF[self.gammaF_lim[1,:]], gammadotF[self.gammaF_lim[1,:]], WF[:,self.gammaF_lim[1,:]] = contact_constraints.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[1],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
+            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = contact_constraints.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.a_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
             # saving values
             # minimizing_tau_save[:,iter] = tau 
             
         elif np.size(tau) == 1:
-            # This case is rare if the hoop is not initialized to a horizontal configuration
-            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = self.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
+            # This case is rare if the hoop is not initialized to a horizontal configuration, or the extremum is at the end of the array
+            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = contact_constraints.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
             gN[1] = 1   # >0, no contact, we don't worry about other values
             # saving values
             # minimizing_tau_save[0,iter] = tau.item()
@@ -748,12 +694,6 @@ class Simulation:
                 if convergence_counter == 0:
                     self.f.write(f"  Convergence! This is the first converged leaf. Do not increment saved arrays.")
                     print(f'This is the first converged leaf. Do not increment saved arrays.')
-                    self.q_save[leaf,:,iter] = q
-                    self.u_save[leaf,:,iter] = u
-                    self.X_save[leaf,:,iter] = X
-                    self.gNdot_save[leaf,:,iter] = gNdot
-                    self.gammaF_save[leaf,:,iter] = gammaF
-                    self.AV_save[leaf,:,iter] = AV
                 else:
                     self.f.write(f"  Convergence! Increment saved arrays.")
                     print(f'Increment saved arrays.')
@@ -761,12 +701,13 @@ class Simulation:
                     # increment at end of saved arrays
                     self.total_leaves += 1
                     leaf += 1
-                    self.q_save[leaf,:,iter] = q
-                    self.u_save[leaf,:,iter] = u
-                    self.X_save[leaf,:,iter] = X
-                    self.gNdot_save[leaf,:,iter] = gNdot
-                    self.gammaF_save[leaf,:,iter] = gammaF
-                    self.AV_save[leaf,:,iter] = AV
+                
+                self.q_save[leaf,:,iter] = q
+                self.u_save[leaf,:,iter] = u
+                self.X_save[leaf,:,iter] = X
+                self.gNdot_save[leaf,:,iter] = gNdot
+                self.gammaF_save[leaf,:,iter] = gammaF
+                self.AV_save[leaf,:,iter] = AV
 
                 convergence_counter += 1
 
@@ -955,5 +896,5 @@ class Simulation:
 
 # hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
 # # Test ibi and bbb
-test = Simulation(ntime = 2000, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
+test = Simulation(ntime = 20, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
 test.solve_A()
