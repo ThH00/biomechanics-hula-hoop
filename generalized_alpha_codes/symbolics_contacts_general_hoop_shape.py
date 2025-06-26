@@ -1,57 +1,51 @@
 import sympy as sp
 import numpy as np
 
-# assumptions
-# hip has no angular velocity
+tau = sp.symbols('tau') # parametrizing hoop
 
-# dh = sp.symbols('dh')       # horizontal distance from hoop base center to minimizing point
-tau = sp.symbols('tau')
-
-# radius of hoop
-R_hoop = sp.symbols('R_hoop')
+R_hoop = sp.symbols('R_hoop')   # radius of hoop
 
 E1 = np.array([1,0,0])
 E2 = np.array([0,1,0])
 E3 = np.array([0,0,1])
 
-# Define an array of symbols
-xbar_hoop = sp.symbols('xbar_hoop:3')   # Creates xbar_hoop0, xbar_hoop1, xbar_hoop2
-# position vectors to center base of hip
+## Define symbolic variables
+
+# position vector to center base of hip
 xbar_hip = sp.symbols('xbar_hip:3')     # Creates xbar_hip0, xbar_hip1, xbar_hip2
+xbar_hoop = sp.symbols('xbar_hoop:3')   # Creates xbar_hoop0, xbar_hoop1, xbar_hoop2
 
-# Defining velocity variables
-vbar_hoop = sp.symbols('vbar_hoop:3')   # Creates vbar_hoop0, vbar_hoop1, vbar_hoop2
 vbar_hip = sp.symbols('vbar_hip:3')     # Creates vbar_hip0, vbar_hip1, vbar_hip2
+vbar_hoop = sp.symbols('vbar_hoop:3')   # Creates vbar_hoop0, vbar_hoop1, vbar_hoop2
 
-# Defining acceleration variables
-abar_hoop = sp.symbols('abar_hoop:3')   # Creates abar_hoop0, abar_hoop1, abar_hoop2
 abar_hip = sp.symbols('abar_hip:3')     # Creates abar_hip0, abar_hip1, abar_hip2
+abar_hoop = sp.symbols('abar_hoop:3')   # Creates abar_hoop0, abar_hoop1, abar_hoop2
 
-psi_hip = sp.symbols('psi')
-theta_hip = sp.symbols('theta')
-phi_hip = sp.symbols('phi')
+psi_hip = sp.symbols('psi_hip')
+theta_hip = sp.symbols('theta_hip')
+phi_hip = sp.symbols('phi_hip')
 
-psidot_hip = sp.symbols('psidot')
-thetadot_hip = sp.symbols('thetadot')
-phidot_hip = sp.symbols('phidot')
+psidot_hip = sp.symbols('psidot_hip')
+thetadot_hip = sp.symbols('thetadot_hip')
+phidot_hip = sp.symbols('phidot_hip')
 
-psiddot_hip = sp.symbols('psiddot')
-thetaddot_hip= sp.symbols('thetaddot')
-phiddot_hip = sp.symbols('phiddot')
+psiddot_hip = sp.symbols('psiddot_hip')
+thetaddot_hip= sp.symbols('thetaddot_hip')
+phiddot_hip = sp.symbols('phiddot_hip')
 
-psi_hoop = sp.symbols('psi')
-theta_hoop = sp.symbols('theta')
-phi_hoop = sp.symbols('phi')
+psi_hoop = sp.symbols('psi_hoop')
+theta_hoop = sp.symbols('theta_hoop')
+phi_hoop = sp.symbols('phi_hoop')
 
-psidot_hoop = sp.symbols('psidot')
-thetadot_hoop = sp.symbols('thetadot')
-phidot_hoop = sp.symbols('phidot')
+psidot_hoop = sp.symbols('psidot_hoop')
+thetadot_hoop = sp.symbols('thetadot_hoop')
+phidot_hoop = sp.symbols('phidot_hoop')
 
-psiddot_hoop = sp.symbols('psiddot')
-thetaddot_hoop = sp.symbols('thetaddot')
-phiddot_hoop = sp.symbols('phiddot')
+psiddot_hoop = sp.symbols('psiddot_hoop')
+thetaddot_hoop = sp.symbols('thetaddot_hoop')
+phiddot_hoop = sp.symbols('phiddot_hoop')
 
-# Rotation matrices
+# rotation matrices
 R1_hip = np.array([[sp.cos(psi_hip), sp.sin(psi_hip), 0],[-sp.sin(psi_hip), sp.cos(psi_hip), 0],[0, 0, 1]])
 R2_hip = np.array([[1, 0, 0],[0, sp.cos(theta_hip), sp.sin(theta_hip)],[0, -sp.sin(theta_hip), sp.cos(theta_hip)]])
 R3_hip = np.array([[sp.cos(phi_hip), sp.sin(phi_hip), 0],[-sp.sin(phi_hip), sp.cos(phi_hip), 0],[0, 0, 1]])
@@ -65,10 +59,10 @@ e1_hip = np.transpose(R3_hip@R2_hip@R1_hip)@E1
 e2_hip = np.transpose(R3_hip@R2_hip@R1_hip)@E2
 e3_hip = np.transpose(R3_hip@R2_hip@R1_hip)@E3
 
-e1p_hoop = np.transpose(R1_hip)@E1
-e1_hoop = np.transpose(R3_hip@R2_hip@R1_hip)@E1
-e2_hoop = np.transpose(R3_hip@R2_hip@R1_hip)@E2
-e3_hoop = np.transpose(R3_hip@R2_hip@R1_hip)@E3
+e1p_hoop = np.transpose(R1_hoop)@E1
+e1_hoop = np.transpose(R3_hoop@R2_hoop@R1_hoop)@E1
+e2_hoop = np.transpose(R3_hoop@R2_hoop@R1_hoop)@E2
+e3_hoop = np.transpose(R3_hoop@R2_hoop@R1_hoop)@E3
 
 omega_hip = psidot_hip*E3+thetadot_hip*e1p_hip+phidot_hip*e3_hip
 omega_hoop = psidot_hoop*E3+thetadot_hoop*e1p_hoop+phidot_hoop*e3_hoop
@@ -80,45 +74,65 @@ varsdot = np.array([vbar_hoop[0], vbar_hoop[1], vbar_hoop[2], psidot_hoop, theta
 varsddot = np.array([abar_hoop[0], abar_hoop[1], abar_hoop[2], psiddot_hoop, thetaddot_hoop, phiddot_hoop, abar_hip[0], abar_hip[1], abar_hip[2],psiddot_hip, thetaddot_hip, phiddot_hip])
 n_vars = np.size(vars)
 
-## Calculating the gap distance constraint, its derivative, and its gradient
+## Calculate the gap distance constraint, its derivative, and its gradient for some tau
 u = sp.cos(tau)*e1_hoop+sp.sin(tau)*e2_hoop
 xM = xbar_hoop+R_hoop*u
 dv = np.dot(xM-xbar_hip,e3_hip)
-temp1 = xM-dv*e3_hip-xbar_hip
-dh = np.dot(temp1,temp1)**0.5
+dh_vec = xM-dv*e3_hip-xbar_hip
+dh = np.dot(dh_vec,dh_vec)**0.5
+v = dh_vec/dh
 
-# the hip is a paraboloid
-# the radius of the hip depends on the height of the paraboloid
-a = 1
-c = 1
-R_hip = sp.sqrt(a**2+(a/c)**2*(dv**2))
+def get_R_hip(dv):
+    ''' In general, the radius is written as a function of dv
+        # Example: hyperboloid
+        # position vector of point on hip: R_hip = x1*e1_hip+y2*e2_hip+z3*e3_hip
+        # equation of surface: S = x1^2/a^2+x2^2/a^2-x3^2/c^2-1
+        a = 1
+        c = 1
+        R_hip = sp.sqrt(a**2+(a/c)**2*(dv**2))
+        n = 2*x/a**2*Ex+2*y/a**2*Ey+2*z/c**2*Ez
+    '''
+    # Cylinderical hip
+    R_hip = 0.2
+    return R_hip
 
+R_hip = get_R_hip(dv)
 gN = dh - R_hip
 
-# Right handed orthonormal basis of contact point
-v = temp1/dh
-dfdz = dv/R_hip*(a/c)**2
-temp2 = v-dfdz*E3
-n = temp2/(np.dot(temp2,temp2)**0.5)
+# Get a right handed basis at contact point
+xP_wrt_xbar_hip = dv*e3_hip+R_hip*v
+xP_rel1 = np.dot(xP_wrt_xbar_hip,e1_hip)    # dh*dot(v,e1_hip)
+xP_rel2 = np.dot(xP_wrt_xbar_hip,e2_hip)    # dh*dot(v,e2_hip)
+xP_rel3 = np.dot(xP_wrt_xbar_hip,e3_hip)    # dv
+
+def get_n(x1,x2,x3):
+    '''Get unit normal to surface a specific point.
+        equation of surface: S(x1,x2,x3)
+        unit normal: n = S_x1*e1_hip+S_x2*e2_hip+S_x3*e3_hip
+    '''
+    n = np.array([x1, x2, 0])/((x1**2+x2**2)**0.5)
+    return n
+
+n = get_n(xP_rel1, xP_rel2, xP_rel3)
 temp3 = np.cross(e3_hip,n)
-t1 = temp3/(np.dot(temp3,temp3)**0.5)
+t1 = temp3/(np.dot(temp3,temp3)**0.5)   # horizontal tangent
 t2 = np.cross(n,t1)
 
 # First derivative with respect to each variable
 grad_N = [sp.diff(gN, xi) for xi in vars]
-# Calculating contact constraint derivative
+# Calculate contact constraint derivative
 gNdot = 0
 for i in range(n_vars):
     gNdot += grad_N[i]*varsdot[i]
 
 # Second derivative with respect to each variable
 grad2_N = [sp.diff(gN, xi, 2) for xi in vars]
-# Calculating second constraint derivative
+# Calculate second constraint derivative
 gNddot = 0
 for i in range(n_vars):
     gNddot += grad2_N[i]*(varsdot[i]**2)+grad_N[i]*varsddot[i]
 
-# Calculating the constraint gradient
+# Calculate the constraint gradient
 WN0 = grad_N[0]
 WN1 = grad_N[1]
 WN2 = grad_N[2] 
@@ -133,18 +147,18 @@ xM = xbar_hoop+R_hoop*u
 vM = vbar_hoop+np.cross(omega_hoop,R_hoop*u)
 
 # Motion of contact point on hip
-xP = xbar_hip+dv*E3+R_hip*v
+xP = xbar_hip+dv*e3_hip+R_hip*v
 # R_hip also a function of time
-vP = vbar_hip+np.cross(omega_hoop,dv*E3+R_hip*v)
+vP = vbar_hip+np.cross(omega_hip,dv*E3+R_hip*v)
 
-# Slip speeds
+# Slip speeds (applicable when M and P are touching)
 gammaF1 = np.dot(vM-vP,t1)
 gammaF2 = np.dot(vM-vP,t2)
 
 # First derivative with respect to each variable
 grad_F1 = [sp.diff(gammaF1, xi) for xi in varsdot]
 grad_F2 = [sp.diff(gammaF2, xi) for xi in varsdot]
-# Calculating contact constraint derivative
+# Calculating contact constraints derivatives
 gammadotF1 = 0
 gammadotF2 = 0
 for i in range(n_vars):
@@ -171,7 +185,7 @@ def prep_for_numpy(string):
     string = string.replace('sin', 'np.sin')
     string = string.replace('cos', 'np.cos')
 
-    string = string.replace('R_hoop', 'self.R_hoop')\
+    string = string.replace('R_hoop', 'self.R_hoop')
 
     string = string.replace('xbar_hip0', 'xbar_hip[0]')
     string = string.replace('xbar_hip1', 'xbar_hip[1]')
@@ -195,6 +209,7 @@ def prep_for_numpy(string):
     string = string.replace('abar_hoop2', 'abar_hoop[2]')
 
     return(string)
+
 
 gN = prep_for_numpy(str(gN))
 gNdot = prep_for_numpy(str(gNdot))
@@ -227,12 +242,8 @@ WF2_4 = prep_for_numpy(str(WF2_4))
 WF2_5 = prep_for_numpy(str(WF2_5))
 
 ## Writing expressions to file
-
-# Define the string
-
-
 # Open the file in append mode
-with open("output_hyperboloid.txt", "a") as file:
+with open("output_moving_cylinder.txt", "a") as file:
     # Append the string to the file
     file.write(f'gN = {gN}\n')
     file.write(f'gNdot = {gNdot}\n')

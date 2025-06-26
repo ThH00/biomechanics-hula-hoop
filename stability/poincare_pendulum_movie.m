@@ -1,4 +1,4 @@
-% Poincare sections of equation (2.14)
+% Poincare sections of equation (5.2)
 close all
 
 % EOM parameters
@@ -9,9 +9,9 @@ close all
 
 
 m = 1;
-alpha = 0.4;
-beta = 0.02;
-delta = 0.002;
+alpha = 4;
+beta = 0.01;
+delta = 0.0001;
 
 [Delta, Alpha, Beta] = ndgrid(delta, alpha, beta);
 M = m^3;    % total parameter combinations
@@ -51,9 +51,9 @@ ylim([-6, 6])
 opts = odeset('RelTol',1e-9,'AbsTol',1e-9);
 
 % Time setup
-omega = 1;
+omega = 4;
 T = 2*pi / omega;     % Forcing period
-nPeriods = 100;       % Total number of periods
+nPeriods = 1000;       % Total number of periods
 dt = 0.001;            % Integration time step
 tSpan = 0:dt:nPeriods*T;
 
@@ -71,7 +71,7 @@ for r = 1:m
                 [tau, Y] = ode45(@(tau,y) odefcn(tau,y,Alpha(r,s,t),Beta(r,s,t),Delta(r,s,t)), tSpan, y0(k,:), opts);
 
                 % Sample the solution at each period of the forcing (Poincaré section)
-                sampleTimes = 0:T:(nPeriods-1)*T;
+                sampleTimes = 500*T:T:(nPeriods-1)*T;
                 xi = mod(interp1(tau, Y(:,1), sampleTimes),2*pi);
                 xi_prime = interp1(tau, Y(:,2), sampleTimes);
 
