@@ -8,7 +8,7 @@ from scipy.signal import argrelextrema
 import scipy.io
 from datetime import datetime
 import shutil
-import contact_constraints
+
 
 # creating custom exceptions
 class MaxNewtonIterAttainedError(Exception):
@@ -105,22 +105,24 @@ class Simulation:
         vbar_hip = np.zeros((self.ntime,3))
         abar_hip = np.zeros((self.ntime,3))
 
-        psi_hip = (np.pi/2)*np.ones(self.ntime)
-        theta_hip = (np.pi/2)*np.ones(self.ntime)
-        phi_hip = np.zeros(self.ntime)
+        psi_hip = np.zeros((self.ntime,1))
+        theta_hip = np.zeros((self.ntime,1))
+        # psi_hip = (np.pi/2)*np.ones((self.ntime,1))
+        # theta_hip = (np.pi/2)*np.ones((self.ntime,1))
+        phi_hip = np.zeros((self.ntime,1))
 
-        psidot_hip = np.zeros(self.ntime)
-        thetadot_hip = np.zeros(self.ntime)
-        phidot_hip = np.zeros(self.ntime)
+        psidot_hip = np.zeros((self.ntime,1))
+        thetadot_hip = np.zeros((self.ntime,1))
+        phidot_hip = np.zeros((self.ntime,1))
 
-        psiddot_hip = np.zeros(self.ntime)
-        thetaddot_hip = np.zeros(self.ntime)
-        phiddot_hip = np.zeros(self.ntime)
+        psiddot_hip = np.zeros((self.ntime,1))
+        thetaddot_hip = np.zeros((self.ntime,1))
+        phiddot_hip = np.zeros((self.ntime,1))
 
         # CHECK HERE
-        self.q_hip = np.concatenate(xbar_hip, psi_hip, theta_hip, phi_hip)
-        self.u_hip = np.concatenate(vbar_hip, psidot_hip, thetadot_hip, phidot_hip)
-        self.a_hip = np.concatenate(abar_hip, psiddot_hip, thetaddot_hip, phiddot_hip)
+        self.q_hip = np.concatenate((xbar_hip, psi_hip, theta_hip, phi_hip),axis=1)
+        self.u_hip = np.concatenate((vbar_hip, psidot_hip, thetadot_hip, phidot_hip),axis=1)
+        self.a_hip = np.concatenate((abar_hip, psiddot_hip, thetaddot_hip, phiddot_hip),axis=1)
 
         # hoop properties
         self.m = 0.2/m_nd      # mass of hoop
@@ -177,11 +179,12 @@ class Simulation:
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
         self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
         # initial position
-        # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
-        q0 = np.array([0, self.R_hip-self.R_hoop, 0, np.pi/2, np.pi/2, 0])
+        q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
+        # q0 = np.array([0, 0, self.R_hip-self.R_hoop+0.01, np.pi/2, np.pi/2, 0])
+        # q0 = np.array([0, 0, 0, np.pi/2, np.pi/2, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([0, 0, 0, 0, 0, 10])
+        u0 = np.array([-0.1, 0, 0, 0, 0, 10])
         self.u_save[0,:,0] = u0
         # multiple solution parameters
         self.total_leaves = 0
@@ -190,6 +193,10 @@ class Simulation:
         
         # creating an output file f to log major happenings
         self.f = open(f"{self.output_path}/log_file.txt",'a')
+
+        # Bind the function to the class
+        from contact_constraints import get_contact_constraints
+        self.get_contact_constraints = get_contact_constraints.__get__(self)
 
     def save_arrays(self):
         """Saving arrays."""
@@ -202,8 +209,8 @@ class Simulation:
         file_name_x_save = str(f'{self.output_path}/x_save.mat')
         scipy.io.savemat(file_name_x_save,dict(X=self.X_save))
 
-        file_name_xbar_hip = str(f'{self.output_path}/xbar_hip.mat')
-        scipy.io.savemat(file_name_xbar_hip,dict(xbar_hip=self.xbar_hip))
+        file_name_q_hip = str(f'{self.output_path}/q_hip.mat')
+        scipy.io.savemat(file_name_q_hip,dict(q_hip=self.q_hip))
 
         file_name_contacts = str(f'{self.output_path}/contacts.mat')
         scipy.io.savemat(file_name_contacts,dict(contacts=self.contacts_save))
@@ -261,7 +268,7 @@ class Simulation:
         dv = np.dot(xM,e3_hip)
         dh_vec = xM-dv[:, np.newaxis]*e3_hip-xbar_hip
         # Compute the norm of each row
-        dh = np.linalg.norm(dh_vec, axis=1)
+        dh = np.linalg.norm(dh_vec, axis=1) # SOMETHING WRONG WITH DH CALCULATION
 
         # Find the minimizers of dh
         # Find local minima (less than neighbors)
@@ -274,6 +281,7 @@ class Simulation:
         # minimizing_dh = dh[min_indices]
 
         return minimizing_tau
+
     
     def combine_contact_constraints(self,iter,q_hoop,u_hoop,a_hoop):
         ''' Combine all gap distance, slip speed functions and the gradients and derivatives from both contacts.'''
@@ -294,14 +302,14 @@ class Simulation:
         WF = np.zeros((self.ndof, self.nF))
 
         if np.size(tau) == 2:  # two local minima
-            gN[1], gNdot[1], gNddot[1], WN[:,1], gammaF[self.gammaF_lim[1,:]], gammadotF[self.gammaF_lim[1,:]], WF[:,self.gammaF_lim[1,:]] = contact_constraints.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[1],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
-            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = contact_constraints.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.a_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
+            gN[1], gNdot[1], gNddot[1], WN[:,1], gammaF[self.gammaF_lim[1,:]], gammadotF[self.gammaF_lim[1,:]], WF[:,self.gammaF_lim[1,:]] = self.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[1],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
+            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = self.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.a_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
             # saving values
             # minimizing_tau_save[:,iter] = tau 
             
         elif np.size(tau) == 1:
             # This case is rare if the hoop is not initialized to a horizontal configuration, or the extremum is at the end of the array
-            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = contact_constraints.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
+            gN[0], gNdot[0], gNddot[0], WN[:,0], gammaF[self.gammaF_lim[0,:]], gammadotF[self.gammaF_lim[0,:]], WF[:,self.gammaF_lim[0,:]] = self.get_contact_constraints(q_hoop,u_hoop,a_hoop,tau[0],self.q_hip[iter,:],self.u_hip[iter,:],self.a_hip[iter,:])
             gN[1] = 1   # >0, no contact, we don't worry about other values
             # saving values
             # minimizing_tau_save[0,iter] = tau.item()
@@ -862,11 +870,10 @@ class Simulation:
                             
     def solve_A(self):
         leaf = 0
-        iter = 1
 
         while leaf <= self.total_leaves:
+            iter = 1
             self.f.write(f"  Increment leaf = {leaf}. iter = {iter}.")
-            iter = 0
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
@@ -874,12 +881,11 @@ class Simulation:
             leaf += convergence_counter
 
     def solve_B(self):
-        leaf = 0
         iter = 1
 
         while iter <= self.ntime:
-            self.f.write(f"  Increment iter = {iter}. leaf = {leaf}.")
             leaf = 0
+            self.f.write(f"  Increment iter = {iter}. leaf = {leaf}.")
             while leaf < self.total_leaves:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])

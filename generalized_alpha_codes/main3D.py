@@ -945,7 +945,7 @@ class Simulation:
 
         while leaf <= self.total_leaves:
             self.f.write(f"  Increment leaf = {leaf}. iter = {iter}.")
-            iter = 0
+            iter = 1
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
                 self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
