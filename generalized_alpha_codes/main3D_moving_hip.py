@@ -105,10 +105,10 @@ class Simulation:
         vbar_hip = np.zeros((self.ntime,3))
         abar_hip = np.zeros((self.ntime,3))
 
-        psi_hip = np.zeros((self.ntime,1))
-        theta_hip = np.zeros((self.ntime,1))
-        # psi_hip = (np.pi/2)*np.ones((self.ntime,1))
-        # theta_hip = (np.pi/2)*np.ones((self.ntime,1))
+        # psi_hip = np.zeros((self.ntime,1))
+        # theta_hip = np.zeros((self.ntime,1))
+        psi_hip = (np.pi/2)*np.ones((self.ntime,1))
+        theta_hip = (np.pi/2)*np.ones((self.ntime,1))
         phi_hip = np.zeros((self.ntime,1))
 
         psidot_hip = np.zeros((self.ntime,1))
@@ -179,12 +179,12 @@ class Simulation:
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
         self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
         # initial position
-        q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
-        # q0 = np.array([0, 0, self.R_hip-self.R_hoop+0.01, np.pi/2, np.pi/2, 0])
-        # q0 = np.array([0, 0, 0, np.pi/2, np.pi/2, 0])
+        # q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
+        q0 = np.array([0, 0, self.R_hip-self.R_hoop+0.001, np.pi/2, np.pi/2, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([-0.1, 0, 0, 0, 0, 10])
+        # u0 = np.array([-0.1, 0, 0, 0, 0, 10])
+        u0 = np.array([1, 0, 0, 0, 0, 0])
         self.u_save[0,:,0] = u0
         # multiple solution parameters
         self.total_leaves = 0
@@ -902,5 +902,5 @@ class Simulation:
 
 # hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
 # # Test ibi and bbb
-test = Simulation(ntime = 20, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
+test = Simulation(ntime = 300, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
 test.solve_A()
