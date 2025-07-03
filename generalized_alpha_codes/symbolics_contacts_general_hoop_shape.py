@@ -92,7 +92,7 @@ def get_R_hip(dv):
         R_hip = sp.sqrt(a**2+(a/c)**2*(dv**2))
         n = 2*x/a**2*Ex+2*y/a**2*Ey+2*z/c**2*Ez
     '''
-    # Cylinderical hip
+    # Cylindrical hip
     R_hip = 0.2
     return R_hip
 

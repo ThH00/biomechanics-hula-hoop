@@ -178,6 +178,8 @@ class Simulation:
         self.gammaF_save = np.zeros((1,self.nF,self.ntime))
         self.AV_save = np.zeros((1,self.ndof+self.nN+self.nF,self.ntime))
         self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
+        # saving iter_start array. first entry: leaf 0, iter_start = 1
+        self.bif_iter_start = np.array([[0,1]])
         # initial position
         # q0 = np.array([self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         q0 = np.array([0, 0, self.R_hip-self.R_hoop+0.001, np.pi/2, np.pi/2, 0])
@@ -281,8 +283,7 @@ class Simulation:
         # minimizing_dh = dh[min_indices]
 
         return minimizing_tau
-
-    
+ 
     def combine_contact_constraints(self,iter,q_hoop,u_hoop,a_hoop):
         ''' Combine all gap distance, slip speed functions and the gradients and derivatives from both contacts.'''
 
@@ -590,14 +591,17 @@ class Simulation:
         return a,U,Q,Kappa_g,Lambda_g,lambda_g,Lambda_gamma,lambda_gamma,\
             Kappa_N,Lambda_N,lambda_N,Lambda_F,lambda_F
 
-    def increment_saved_arrays(self,leaf):
+    def increment_saved_arrays(self,leaf,convergence_counter,iter):
         '''Increment saved arrays due to a bifurcation.'''
 
         self.f.write(f"  Saved arrays are incremented at leaf={leaf}.")
         
         self.save_arrays()
 
-        # increment saved arrays
+        bif_iter_start
+
+        bif_iter_start_addition = np.array([leaf+convergence_counter,iter])
+        self.bif_iter_start = np.insert(self.bif_iter_start, leaf + 1, bif_iter_start_addition, axis=0)
         
         q_save_addition = np.tile(self.q_save[leaf:leaf+1, :, :], (1, 1, 1))  # shape: (1, :, :)
         self.q_save = np.insert(self.q_save, leaf + 1, q_save_addition, axis=0)
@@ -672,8 +676,7 @@ class Simulation:
         else:
             self.f.write(f"  Raised NoOpenContactError. The contact is not open.")
             raise NoOpenContactError
-        
-        
+            
     def solve_fixed_contacts(self, iter, leaf, unique_contacts):
         '''Solving for a set of fixed contact regions.'''
 
@@ -705,7 +708,7 @@ class Simulation:
                 else:
                     self.f.write(f"  Convergence! Increment saved arrays.")
                     print(f'Increment saved arrays.')
-                    self.increment_saved_arrays(leaf)
+                    self.increment_saved_arrays(leaf,convergence_counter,iter)
                     # increment at end of saved arrays
                     self.total_leaves += 1
                     leaf += 1
@@ -872,7 +875,7 @@ class Simulation:
         leaf = 0
 
         while leaf <= self.total_leaves:
-            iter = 1
+            iter = self.bif_iter_start[leaf,1]
             self.f.write(f"  Increment leaf = {leaf}. iter = {iter}.")
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
@@ -902,5 +905,5 @@ class Simulation:
 
 # hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
 # # Test ibi and bbb
-test = Simulation(ntime = 300, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
+test = Simulation(ntime = 10, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5)
 test.solve_A()
