@@ -1,0 +1,206 @@
+folder_path = "/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/2025-07-01_21-20-37";
+% loading the position coordinates of the hoop
+load(folder_path+"/q.mat")
+% loading the position coordinates of the hip
+load(folder_path+"/q_hip.mat")
+q_hip = q_hip';
+
+figure()
+hold on
+view(0,30)
+xlim([-2, 2])
+ylim([-2, 2])
+zlim([-2, 2])
+box on
+
+% Fixed basis
+E1 = [1;0;0];
+E2 = [0;1;0];
+E3 = [0;0;1];
+
+animation = VideoWriter(folder_path+"/animation.mp4", 'MPEG-4');
+animation.FrameRate = 30;
+open(animation);
+
+ang_arr = linspace(0,2*pi,50);
+R_hoop = 0.5;
+R_hip = 0.2;
+
+% plot the cylinder
+z = linspace(-1.5,1.5,100);
+% r = 0.5-0.4*z;
+r = R_hip*ones(100,1);
+hold on
+
+k = 1;
+
+view_array = [15,15;90,0;0,90]; % isometric, front, top
+
+for i = 1:length(q(k,1,:))
+    
+    xlim([-2, 2])
+    ylim([-2, 2])
+    zlim([-2, 2])
+
+    %% hoop quantities
+    xbar_hoop = q(k,1:3,i);
+    x1_hoop = q(k,1,i);
+    x2_hoop = q(k,2,i);
+    x3_hoop = q(k,3,i);
+
+    psi_hoop = q(k,4,i);
+    theta_hoop = q(k,5,i);
+    phi_hoop = q(k,6,i);
+    
+    % Rotation matrices
+    R1_hoop = [cos(psi_hoop), sin(psi_hoop), 0;
+          -sin(psi_hoop), cos(psi_hoop), 0;
+          0, 0, 1];
+      
+    R2_hoop = [1, 0, 0;
+          0, cos(theta_hoop), sin(theta_hoop);
+          0, -sin(theta_hoop), cos(theta_hoop)];
+    
+    R3_hoop = [cos(phi_hoop), sin(phi_hoop), 0;
+          -sin(phi_hoop), cos(phi_hoop), 0;
+          0, 0, 1];
+    
+    % {E1, E2, E3} components of {e1',e2',e3'}
+    e1p_hoop = R1_hoop'*E1;
+    e2p_hoop = R1_hoop'*E2;
+    e3p_hoop = R1_hoop'*E3;
+    
+    % {E1, E2, E3} components of {e1'',e2'',e3''}
+    e1pp_hoop = (R2_hoop*R1_hoop)'*E1;
+    e2pp_hoop = (R2_hoop*R1_hoop)'*E2;
+    e3pp_hoop = (R2_hoop*R1_hoop)'*E3;
+    
+    % {E1, E2, E3} components of {e1,e2,e3}
+    e1_hoop = (R3_hoop*R2_hoop*R1_hoop)'*E1;
+    e2_hoop = (R3_hoop*R2_hoop*R1_hoop)'*E2;
+    e3_hoop = (R3_hoop*R2_hoop*R1_hoop)'*E3;
+
+    %% hip quantities
+    xbar_hip = q_hip(1:3,i);
+    x1_hip = q_hip(1,i);
+    x2_hip = q_hip(2,i);
+    x3_hip = q_hip(3,i);
+
+    psi_hip = q_hip(4,i);
+    theta_hip = q_hip(5,i);
+    phi_hip = q_hip(6,i);
+    
+    % Rotation matrices
+    R1_hip = [cos(psi_hip), sin(psi_hip), 0;
+          -sin(psi_hip), cos(psi_hip), 0;
+          0, 0, 1];
+      
+    R2_hip = [1, 0, 0;
+          0, cos(theta_hip), sin(theta_hip);
+          0, -sin(theta_hip), cos(theta_hip)];
+    
+    R3_hip = [cos(phi_hip), sin(phi_hip), 0;
+          -sin(phi_hip), cos(phi_hip), 0;
+          0, 0, 1];
+    
+    % {E1, E2, E3} components of {e1',e2',e3'}
+    e1p_hip = R1_hip'*E1;
+    e2p_hip = R1_hip'*E2;
+    e3p_hip = R1_hip'*E3;
+    
+    % {E1, E2, E3} components of {e1'',e2'',e3''}
+    e1pp_hip = (R2_hip*R1_hip)'*E1;
+    e2pp_hip = (R2_hip*R1_hip)'*E2;
+    e3pp_hip = (R2_hip*R1_hip)'*E3;
+    
+    % {E1, E2, E3} components of {e1,e2,e3}
+    e1_hip = (R3_hip*R2_hip*R1_hip)'*E1;
+    e2_hip = (R3_hip*R2_hip*R1_hip)'*E2;
+    e3_hip = (R3_hip*R2_hip*R1_hip)'*E3;
+
+    title(num2str(i));
+
+    for p = 1:3 % plotting three views
+    
+        subplot(1,3,p)
+        hold on
+
+        % plotting center of hoop
+        hoop_center(p) = plot3(x1_hoop, x2_hoop, x3_hoop, 'Marker', '.', 'MarkerSize', 10);
+    
+        % {e1_hoop, e2_hoop, e3_hoop} basis at center of hoop
+        e1_hoop_plot(p) = quiver3(x1_hoop, x2_hoop, x3_hoop, e1_hoop(1), e1_hoop(2), e1_hoop(3),'r');
+        e2_hoop_plot(p) = quiver3(x1_hoop, x2_hoop, x3_hoop, e2_hoop(1), e2_hoop(2), e2_hoop(3),'g');
+        e3_hoop_plot(p) = quiver3(x1_hoop, x2_hoop, x3_hoop, e3_hoop(1), e3_hoop(2), e3_hoop(3),'b');
+        
+        % plotting the hip
+        for j = 1:length(ang_arr)
+            A = xbar_hip+R_hip*(cos(ang_arr(j))*e1_hip+sin(ang_arr(j))*e2_hip)-1.5*e3_hip;
+            B = A+3*e3_hip;
+            C = A+1.5*e3_hip;
+            % cylinder sides (vertical lines)
+            hip(p,j) = plot3([A(1), B(1)],[A(2), B(2)],[A(3), B(3)],'k');
+            % circular base
+            hip_base1(p,j) = plot3(A(1),A(2),A(3),'.','Color','k','LineWidth',2);
+            hip_base2(p,j) = plot3(B(1),B(2),B(3),'.','Color','k','LineWidth',2);
+            hip_base3(p,j) = plot3(C(1),C(2),C(3),'.','Color','k','LineWidth',2);
+        end
+    
+        % plotting the hoop
+        circle(p) = plot3(x1_hoop+R_hoop*cos(ang_arr)*e1_hoop(1)+R_hoop*sin(ang_arr)*e2_hoop(1), ...
+            x2_hoop+R_hoop*cos(ang_arr)*e1_hoop(2)+R_hoop*sin(ang_arr)*e2_hoop(2), ...
+            x3_hoop+R_hoop*cos(ang_arr)*e1_hoop(3)+R_hoop*sin(ang_arr)*e2_hoop(3), ...
+            'color','b','LineWidth',2);
+    
+        axis equal
+        xlim([-2 2])
+        ylim([-2 2])
+        
+        xlabel('x')
+        ylabel('y')
+        zlabel('z')
+        view(view_array(p,1),view_array(p,2))
+
+    end
+
+    drawnow
+    writeVideo(animation, getframe(gcf))
+
+    % pause(0.001)
+    for p = 1:3
+        subplot(1,3,1)
+        delete(hoop_center(p))
+        delete(e1_hoop_plot(p))
+        delete(e2_hoop_plot(p))
+        delete(e3_hoop_plot(p))
+        delete(circle(p))
+        delete(hip(p,:))
+        delete(circle_hip(p))
+        delete(angle_hip(p))
+    end
+
+end
+
+close(animation)
+% 
+% load('gN.mat')
+% figure()
+% plot(gN(1,:))
+% hold on
+% plot(gN(2,:))
+
+figure()
+subplot(1,3,1)
+title('psi')
+plot(q(:,4))
+
+subplot(1,3,2)
+title('theta')
+plot(q(:,5))
+
+subplot(1,3,3)
+title('phi')
+plot(q(:,6))
+
+
+
