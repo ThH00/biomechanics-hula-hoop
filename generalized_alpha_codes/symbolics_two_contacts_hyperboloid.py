@@ -165,6 +165,7 @@ WF2_5 = grad_F2[5]
 def prep_for_numpy(string):
     string = string.replace('sin', 'np.sin')
     string = string.replace('cos', 'np.cos')
+    string = string.replace('sqrt', 'np.sqrt')
 
     string = string.replace('R_hoop', 'self.R_hoop')
     string = string.replace('R_hip', 'self.R_hip')
