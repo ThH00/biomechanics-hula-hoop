@@ -159,5 +159,7 @@ def get_contact_constraints_hyperboloid(self, q,u,a,tau,xbar_hip,vbar_hip,abar_h
 
     gammaF = np.array([gammaF1, gammaF2])
     gammadotF = np.array([gammadotF1, gammadotF2])
+
+    WF = np.transpose(WF)
     
     return gN, gNdot, gNddot, WN, gammaF, gammadotF, WF
