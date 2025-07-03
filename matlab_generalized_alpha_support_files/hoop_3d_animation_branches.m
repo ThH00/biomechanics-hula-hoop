@@ -1,8 +1,8 @@
 % loading the outputs of the generalized-alpha algorithm
-load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/may_29_1257am/q.mat")
+load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/2025-06-11_18-15-18/q.mat")
 
 % loading the coordinates of the center of the hip
-load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/multiple_solutions/may_29_1257am/xbar_hip.mat")
+load("/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/2025-06-11_18-15-18/xbar_hip.mat")
 xbar_hip = xbar_hip';
 
 % loading the minizing values of tau and dv
@@ -42,7 +42,7 @@ k = 1;
 view_array = [15,15;90,0;0,90];
 % isometric, front, top
 
-for i = 1:826 %length(q(k,1,:))
+for i = 1:length(q(k,1,:))
 
     
     % view(0,30)
@@ -114,8 +114,8 @@ for i = 1:826 %length(q(k,1,:))
             'color','b','LineWidth',2);
     
         axis equal
-        xlim([-1 1])
-        ylim([-1 1])
+        xlim([-2 2])
+        ylim([-2 2])
         
         xlabel('x')
         ylabel('y')
