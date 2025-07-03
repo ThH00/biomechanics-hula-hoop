@@ -4,3 +4,5 @@
 *.mp4
 *.mat
 outputs
+.DS_Store
+__pycache__
