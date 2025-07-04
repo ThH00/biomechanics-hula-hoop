@@ -13,6 +13,9 @@ def load_movella(file,
     x_index = header_keys.index('Acc_X')
     y_index = header_keys.index('Acc_Y')
     z_index = header_keys.index('Acc_Z')
+    x_angle = header_keys.index('Euler_X')
+    y_angle = header_keys.index('Euler_Y')
+    z_angle = header_keys.index('Euler_Z')
     data = np.loadtxt(file,
                 delimiter=",",
                 skiprows=header_row, # Get all the rows after the header
