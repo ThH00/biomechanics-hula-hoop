@@ -35,12 +35,16 @@ theta_hip = q_hip(5,1:ntime);
 phi_hip = q_hip(6,1:ntime);
 
 % height of the center of mass of the hula hoop
-figure(1)
+figure()
+box on
 hold on
-title('Plotting Local Minima','Interpreter','Latex')
-plot(x3_hoop,'LineWidth',1,'Color','b')
+title('Plotting $x_3$, the height of the center of mass of the hoop','Interpreter','Latex')
+plot(x3_hoop,'LineWidth',2,'Color','b','DisplayName','x3-hoop')
+xlabel('$x_3$ (m)','Interpreter','Latex')
+ylabel('iter','Interpreter','Latex')
+legend;
 
-ntau = 10*6;
+ntau = 10^3;
 % Create an array of possible tau values (step size < algorithm tolerance)
 tau = linspace(0, 2*pi, ntau);
 % I can find intervals containing the minima and then refine the discretization in these intervals (or use the bisection method)
@@ -86,17 +90,18 @@ for j = 1:ntime
         dh(i) = norm(dh_vec(i,:));
 
         v = dh_vec(i,:)/dh(i);
-
-        gN(i) = dh(i) - R_hip;
        
     end
 
-    figure(10)
-    clf
-    plot(dh)
-    hold on
-    plot([0,ntau],[0.2,0.2])
-    axis([0,ntau,0,1])
+    % figure(10)
+    % clf
+    % box on
+    % title('dh: distance between all points on hoop and x3 axis')
+    % hold on
+    % plot(dh(:,1),'Linewidth',2,'DisplayName','dh')
+    % plot([0,ntau],[0.2,0.2],'Linewidth',2,'DisplayName','dh = R-hip')
+    % axis([0,ntau,0,1])
+    % legend;
 
     % Find the minimizers of dh
     % Find local minima (less than neighbors)
@@ -123,11 +128,12 @@ for j = 1:ntime
         minimum_dh(j,1) = dh(min_indices);
     end
 
-    % figure(3)
+    % figure()
     % clf
+    % box on
     % hold on
-    % plot3(x1(j)+R_hoop*u(:,1),x2(j)+R_hoop*u(:,2),x3(j)+R_hoop*u(:,3),'LineWidth',1,'Color','b')
-    % plot3(x1(j)+R_hoop*u(min_indices,1),x2(j)+R_hoop*u(min_indices,2),x3(j)+R_hoop*u(min_indices,3),'*','LineWidth',1,'Color','r')
+    % plot3(x1_hoop(j)+R_hoop*u(:,1),x2_hoop(j)+R_hoop*u(:,2),x3_hoop(j)+R_hoop*u(:,3),'LineWidth',1,'Color','b')
+    % plot3(x1_hoop(j)+R_hoop*u(min_indices,1),x2_hoop(j)+R_hoop*u(min_indices,2),x3(j)+R_hoop*u(min_indices,3),'*','LineWidth',1,'Color','r')
     % axis equal
     % xlim([-2,2])
     % ylim([-2,2])
@@ -136,14 +142,15 @@ for j = 1:ntime
 
 end
 
-figure(1)
+figure()
+box on
 hold on
-plot(contact_point_height(:,1),'.','LineWidth',1,'Color','k')
+plot(contact_point_height(:,1),'.','LineWidth',1,'Color','k','DisplayName','Height of contact point')
 
 idx = find(contact_point_height(:,2));
 arr = 1:ntime;
 
-plot(arr(idx),contact_point_height(idx,2),'.', 'LineWidth',1,'Color','k')
+plot(arr(idx),contact_point_height(idx,2),'.', 'LineWidth',1,'Color','k','DisplayName','Touching')
 
 % plot(x3+R_hoop,'--', 'LineWidth',0.5,'Color','b')
 % plot(x3-R_hoop,'--', 'LineWidth',0.5,'Color','b')
@@ -171,10 +178,10 @@ E = squeeze(contacts(1,9:10,1:ntime));
 Etouching_contact_idx1 = find(E(1,:)==1);
 Etouching_contact_idx2 = find(E(2,:)==1);
 
-plot(arr(Atouching_contact_idx2),contact_point_height(Atouching_contact_idx2,2),'.', 'LineWidth',1,'Color','r')
-plot(arr(Atouching_contact_idx1),contact_point_height(Atouching_contact_idx1,1),'.', 'LineWidth',1,'Color','r')
+plot(arr(Atouching_contact_idx2),contact_point_height(Atouching_contact_idx2,2),'.', 'LineWidth',1,'Color','r','DisplayName','A_1=1')
+plot(arr(Atouching_contact_idx1),contact_point_height(Atouching_contact_idx1,1),'.', 'LineWidth',1,'Color','r','DisplayName','A_2=1')
 
-legend('Height of mass center','Height of potential contact point','Height of second contact point', 'Contact is active', 'Interpreter', 'latex');
+% legend('Height of mass center','Height of potential contact point','Height of second contact point', 'Contact is active', 'Interpreter', 'latex');
 
 figure(5)
 hold on
