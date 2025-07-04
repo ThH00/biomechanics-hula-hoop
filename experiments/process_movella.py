@@ -25,7 +25,6 @@ def load_movella(file,
     data[:,0] = (data[:,0]-data[0,0])/1000000 
     # Subtract the lead time
     start_index = np.where(data[:,0]>lead_time)[0][0]
-    print(start_index)
     data = data[start_index:]
     # Start at zero time again
     data[:,0] = data[:,0]-data[0,0]
