@@ -17,13 +17,16 @@ def load_movella(file,
     x_angle = header_keys.index('Euler_X')
     y_angle = header_keys.index('Euler_Y')
     z_angle = header_keys.index('Euler_Z')
+    x_omega = header_keys.index('Gyr_X')
+    y_omega = header_keys.index('Gyr_Y')
+    z_omega = header_keys.index('Gyr_Z\n')
     data = np.loadtxt(file,
                 delimiter=",",
                 skiprows=header_row, # Get all the rows after the header
                 usecols=[time_index,                # time_column
                          x_accel,y_accel,z_accel,   # acceleration column (m/s)
-                         x_angle,y_angle,z_angle    # Euler angles column (deg)
-                         ]
+                         x_angle,y_angle,z_angle,   # Euler angles column (deg)
+                         x_omega,y_omega,z_omega]   # Angular velocities (rad/s)
                 )
     # Change the units of time to seconds and start at zero
     data[:,0] = (data[:,0]-data[0,0])/1000000 
