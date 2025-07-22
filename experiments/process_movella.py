@@ -24,9 +24,9 @@ def load_movella(file,
                 delimiter=",",
                 skiprows=header_row, # Get all the rows after the header
                 usecols=[time_index,                # time_column
-                         x_accel,y_accel,z_accel,   # acceleration column (m/s)
+                         x_accel,y_accel,z_accel,   # acceleration column (m/s^2)
                          x_angle,y_angle,z_angle,   # Euler angles column (deg)
-                         x_omega,y_omega,z_omega]   # Angular velocities (rad/s)
+                         x_omega,y_omega,z_omega]   # Angular velocities (deg/s)
                 )
     # Change the units of time to seconds and start at zero
     data[:,0] = (data[:,0]-data[0,0])/1000000 
@@ -36,7 +36,7 @@ def load_movella(file,
     # Start at zero time again
     data[:,0] = data[:,0]-data[0,0]
     # Baseline correct by subtracting average acceleration of the first 100-200 samples
-    data[:,1:] = data[:,1:] - np.mean(data[100:200,1:],axis=0) 
+    data[:,1:4] = data[:,1:4] - np.mean(data[100:200,1:4],axis=0) 
     # Convert angle to radians
     data[:,4:] = data[:,4:]*np.pi/180
 
