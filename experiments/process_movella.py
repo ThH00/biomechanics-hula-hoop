@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal as signal
 from numpy.polynomial import Polynomial
+from scipy.integrate import cumulative_simpson as integrate
 
 def load_movella(file,
                  header_row=8,
@@ -33,6 +34,8 @@ def load_movella(file,
     data[:,0] = data[:,0]-data[0,0]
     # Baseline correct by subtracting average acceleration of the first 100-200 samples
     data[:,1:] = data[:,1:] - np.mean(data[100:200,1:],axis=0) 
+    # Convert angle to radians
+    data[:,4:] = data[:,4:]*np.pi/180
 
     return data
 
@@ -47,3 +50,18 @@ def detrend(time,
     elif backend=='polynomial':
         pnom = Polynomial.fit(time,data,deg=degree)
         return data - pnom(time)
+    
+def get_position(time,
+                 accel_x,
+                 accel_y,
+                 accel_z):
+    
+    veloc_x = detrend(time[1:], integrate(y=accel_x,x=time))
+    veloc_y = detrend(time[1:], integrate(y=accel_y,x=time))
+    veloc_z = detrend(time[1:], integrate(y=accel_z,x=time))
+
+    displ_x = detrend(time[2:], integrate(y=veloc_x,x=time[1:]))
+    displ_y = detrend(time[2:], integrate(y=veloc_y,x=time[1:]))
+    displ_z = detrend(time[2:], integrate(y=veloc_z,x=time[1:]))
+
+    return displ_x, displ_y, displ_z, veloc_x, veloc_y, veloc_z
