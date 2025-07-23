@@ -14,29 +14,37 @@ def load_movella(file,
     x_accel = header_keys.index('Acc_X')
     y_accel = header_keys.index('Acc_Y')
     z_accel = header_keys.index('Acc_Z')
-    x_angle = header_keys.index('Euler_X')
-    y_angle = header_keys.index('Euler_Y')
-    z_angle = header_keys.index('Euler_Z')
+    w_angle = header_keys.index('Quat_W') if 'Quat_W' in header_keys else None
+    x_angle = header_keys.index('Euler_X') if 'Euler_X' in header_keys else header_keys.index('Quat_X')
+    y_angle = header_keys.index('Euler_Y') if 'Euler_Y' in header_keys else header_keys.index('Quat_Y')
+    z_angle = header_keys.index('Euler_Z') if 'Euler_X' in header_keys else header_keys.index('Quat_Z')
     x_omega = header_keys.index('Gyr_X')
     y_omega = header_keys.index('Gyr_Y')
-    z_omega = header_keys.index('Gyr_Z\n')
+    z_omega = header_keys.index('Gyr_Z\n') if 'Gyr_Z\n' in header_keys else header_keys.index('Gyr_Z')
+    if w_angle is None:
+        usecols=[time_index,                # time_column
+                 x_accel,y_accel,z_accel,   # acceleration column (m/s^2)
+                 x_angle,y_angle,z_angle,   # Euler angles column (deg)
+                 x_omega,y_omega,z_omega]   # Angular velocities (deg/s)
+    else:
+        usecols=[time_index,                         # time_column
+                 x_accel,y_accel,z_accel,            # acceleration column (m/s^2)
+                 w_angle, x_angle,y_angle,z_angle,   # Quaternions column (deg)
+                 x_omega,y_omega,z_omega]            # Angular velocities (deg/s)
     data = np.loadtxt(file,
                 delimiter=",",
                 skiprows=header_row, # Get all the rows after the header
-                usecols=[time_index,                # time_column
-                         x_accel,y_accel,z_accel,   # acceleration column (m/s^2)
-                         x_angle,y_angle,z_angle,   # Euler angles column (deg)
-                         x_omega,y_omega,z_omega]   # Angular velocities (deg/s)
+                usecols=usecols
                 )
     # Change the units of time to seconds and start at zero
     data[:,0] = (data[:,0]-data[0,0])/1000000 
+    # Baseline correct by subtracting average acceleration of the first 100-200 samples
+    data[:,1:4] = data[:,1:4] - np.mean(data[100:200,1:4],axis=0) 
     # Subtract the lead time
     start_index = np.where(data[:,0]>lead_time)[0][0]
     data = data[start_index:]
     # Start at zero time again
     data[:,0] = data[:,0]-data[0,0]
-    # Baseline correct by subtracting average acceleration of the first 100-200 samples
-    data[:,1:4] = data[:,1:4] - np.mean(data[100:200,1:4],axis=0) 
     # Convert angle to radians
     data[:,4:] = data[:,4:]*np.pi/180
 
