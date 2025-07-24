@@ -5,7 +5,8 @@ from scipy.integrate import cumulative_simpson as integrate
 
 def load_movella(file,
                  header_row=8,
-                 lead_time=0):
+                 lead_time=0,
+                 end_time=0):
     # Get the column labels
     with open(file, "r") as readfile:
         header_keys = readfile.readlines()[header_row-1].split(',')
@@ -42,7 +43,8 @@ def load_movella(file,
     data[:,1:4] = data[:,1:4] - np.mean(data[100:200,1:4],axis=0) 
     # Subtract the lead time
     start_index = np.where(data[:,0]>lead_time)[0][0]
-    data = data[start_index:]
+    end_index = np.where(data[:,0]<data[-1,0]-end_time)[0][-1]
+    data = data[start_index:end_index]
     # Start at zero time again
     data[:,0] = data[:,0]-data[0,0]
     # Convert angle to radians
