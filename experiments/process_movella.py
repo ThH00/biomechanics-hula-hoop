@@ -66,7 +66,7 @@ def get_position(time,
                  accel_x,
                  accel_y,
                  accel_z,
-                 detrend=True):
+                 detrended=True):
     
     veloc_x = integrate(y=accel_x,x=time)
     veloc_y = integrate(y=accel_y,x=time)
@@ -76,7 +76,7 @@ def get_position(time,
     displ_y = integrate(y=veloc_y,x=time[1:])
     displ_z = integrate(y=veloc_z,x=time[1:])
     
-    if detrend:
+    if detrended:
         veloc_x = detrend(time[1:], veloc_x)
         veloc_y = detrend(time[1:], veloc_y)
         veloc_z = detrend(time[1:], veloc_z)
