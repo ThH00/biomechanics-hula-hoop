@@ -1,0 +1,4 @@
+veux>=0.0.33
+scipy
+meshio
+numpy
