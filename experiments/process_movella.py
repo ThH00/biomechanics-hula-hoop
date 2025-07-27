@@ -47,7 +47,7 @@ def load_movella(file,
     data = data[start_index:end_index]
     # Start at zero time again
     data[:,0] = data[:,0]-data[0,0]
-    # Convert angle to radians
+    # Convert angle to radians and angular velocities
     data[:,4:] = data[:,4:]*np.pi/180
 
     return data
