@@ -2,6 +2,8 @@ import numpy as np
 import scipy.signal as signal
 from numpy.polynomial import Polynomial
 from scipy.integrate import cumulative_simpson as integrate
+from itertools import groupby
+from operator import itemgetter
 
 def load_movella(file,
                  header_row=8,
@@ -90,3 +92,60 @@ def get_position(time,
         displ_z = detrend(time[2:], displ_z, degree=degree)
 
     return displ_x, displ_y, displ_z, veloc_x, veloc_y, veloc_z
+
+import numpy as np
+import matplotlib.pyplot as plt
+from itertools import groupby
+from operator import itemgetter
+
+def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
+    '''
+    The angle psi seems to be close to linear during steady hula hooping.
+    We exploit this fact to determine the interval of steady hula hooping.
+    
+    Parameters:
+    - psi: 1D numpy array of angle data
+    - dt: time step between samples
+    - threshold: maximum std deviation considered "steady"
+    - window_size: size of moving window for std calculation
+    
+    Returns:
+    - steady_intervals: list of (start_idx, end_idx)
+    - averages: list of average psi values for each interval
+    '''
+
+    # Unwrap and differentiate
+    psi_unwrapped = np.unwrap(psi)
+    dpsi_dt = np.gradient(psi_unwrapped, dt)
+
+    # Time index
+    t = np.arange(len(psi))
+
+    # Moving window std deviation
+    stds = np.array([np.std(dpsi_dt[i:i+window_size]) for i in range(len(psi) - window_size)])
+
+    # Indices where std < threshold
+    steady_indices = np.where(stds < threshold)[0]
+
+    # Merge consecutive indices into intervals
+    groups = []
+    for k, g in groupby(enumerate(steady_indices), lambda ix: ix[0] - ix[1]):
+        group = list(map(itemgetter(1), g))
+        if len(group) >= window_size:
+            groups.append((group[0], group[-1]+window_size))
+
+    # Compute averages in each interval
+    averages = [np.mean(dpsi_dt[start:end]) for start, end in groups]
+
+    # Plot
+    plt.figure(figsize=(10, 3))
+    plt.plot(t, psi, label='psi')
+    plt.plot(t, dpsi_dt, label='dpsi_dt')
+    for i, (start, end) in enumerate(groups):
+        plt.axvspan(t[start], t[end], color='green', alpha=0.3, label='steady' if i == 0 else "")
+        plt.text((t[start]+t[end])/2, psi[start], f'{averages[i]:.2f}', color='black', fontsize=8, ha='center', va='bottom')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    return groups, averages
