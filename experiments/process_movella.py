@@ -1,9 +1,12 @@
 import numpy as np
 import scipy.signal as signal
+import matplotlib.pyplot as plt
 from numpy.polynomial import Polynomial
 from scipy.integrate import cumulative_simpson as integrate
 from itertools import groupby
 from operator import itemgetter
+from scipy.signal import butter, filtfilt, find_peaks
+
 
 def load_movella(file,
                  header_row=8,
@@ -93,11 +96,6 @@ def get_position(time,
 
     return displ_x, displ_y, displ_z, veloc_x, veloc_y, veloc_z
 
-import numpy as np
-import matplotlib.pyplot as plt
-from itertools import groupby
-from operator import itemgetter
-
 def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
     '''
     The angle psi seems to be close to linear during steady hula hooping.
@@ -149,3 +147,61 @@ def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
     plt.show()
 
     return groups, averages
+
+def lowpass_filter(signal, cutoff, fs=120, order=4):
+    """
+    Apply a Butterworth low-pass filter to remove high-frequency noise.
+
+    Parameters:
+    - signal: input 1D signal
+    - cutoff: desired cutoff frequency (Hz)
+    - fs: sampling rate (Hz)
+    - order: order of the filter
+
+    Returns:
+    - filtered signal
+    """
+    nyq = 0.5 * fs  # Nyquist Frequency
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    filtered = filtfilt(b, a, signal)
+
+    # Plotting
+    plt.figure(figsize=(10, 4))
+    plt.plot(signal, label='Noisy signal', alpha=0.6)
+    plt.plot(filtered, label='Filtered signal', linewidth=2)
+    plt.legend()
+    plt.ylabel('Amplitude')
+    plt.title('Low-pass Filter to Remove High-Frequency Noise')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    return filtered
+
+def estimate_period_autocorr(signal, fs=120.0, plot=False):
+    signal = signal - np.mean(signal)
+    autocorr = np.correlate(signal, signal, mode='full')
+    autocorr = autocorr[len(autocorr)//2:]
+
+    # Find all peaks
+    peaks, _ = find_peaks(autocorr)
+
+    if len(peaks) < 1:
+        raise ValueError("No peaks found in autocorrelation.")
+
+    # First peak after lag = 0 is the period
+    period_samples = peaks[0]
+    period_time = period_samples / fs
+
+    if plot:
+        fig, ax = plt.subplots()
+        plt.plot(autocorr)
+        plt.axvline(period_samples, color='r', linestyle='--', label=f'Period ≈ {period_samples}')
+        plt.title("Autocorrelation")
+        plt.xlabel("Lag")
+        plt.ylabel("Autocorrelation")
+        plt.legend()
+        plt.show()
+
+    return period_samples, period_time
