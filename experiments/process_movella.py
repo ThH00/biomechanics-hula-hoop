@@ -179,6 +179,7 @@ def lowpass_filter(signal, cutoff, fs=120, order=4):
 
     return filtered
 
+# @Chrystal. Please check this.
 def estimate_period_autocorr(signal, fs=120.0, plot=False):
     signal = signal - np.mean(signal)
     autocorr = np.correlate(signal, signal, mode='full')
