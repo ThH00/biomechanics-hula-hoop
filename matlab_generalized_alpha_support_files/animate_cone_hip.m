@@ -200,4 +200,11 @@ z = q(k,3,:);
 z = squeeze(z); 
 plot(z,'.')
 
+for k = 1:29
+    figure()
+    z = q(k,3,:);
+    z = squeeze(z); 
+    plot(z,'.')
+end
+
 
