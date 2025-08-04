@@ -74,13 +74,13 @@ class Simulation:
         self.eN = eN        # normal coefficient of restitution
         self.eF = eF        # friction coefficient of retitution
         # nondimensionalization parameters
-        l_nd = 1       # m, length nondimensionalization paramter
-        m_nd = 1       # kg, mass nondimensionalization parameter
-        a_nd = 9.81    # m/(s**2), acceleration nondimensionalization parameter
+        l_nd = 0.01         # m, length nondimensionalization paramter
+        m_nd = 0.001        # kg, mass nondimensionalization parameter
+        a_nd = 9.81         # m/(s**2), acceleration nondimensionalization parameter
         t_nd = np.sqrt(l_nd/a_nd)   # s, time nondimensionalization parameter
         # simulation (time) parameters
-        self.dtime = 2e-3/t_nd # time step duration
-        self.ntime = ntime           # number of iterations
+        self.dtime = 2e-3/t_nd  # time step duration
+        self.ntime = ntime      # number of iterations
         self.tf = self.ntime*self.dtime            # final time
         self.t = np.linspace(0,self.tf,self.ntime) # time array
         # hip properties
@@ -94,43 +94,43 @@ class Simulation:
                 R_hip = sp.sqrt(a**2+(a/c)**2*(dv**2))
             '''
             # Conical hip
-            beta = np.pi/3
-            l = 1
-            R_hip = (l-z)*1/np.tan(beta)
+            beta = 80/180*np.pi
+            l = 20
+            R_hip = -z/np.tan(beta)
 
             return R_hip
 
         # hip motion
-        # omega = 1
-        # a = 1
-        # b = 1
-        # x1bar_hip = a*np.cos(omega*self.t)
-        # x2bar_hip = b*np.sin(omega*self.t)
-        # self.xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
-        # v1bar_hip = a*omega*np.cos(omega*self.t)
-        # v2bar_hip = b*omega*np.sin(omega*self.t)
-        # self.vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
-        # a1bar_hip = a*omega**2*np.cos(omega*self.t)
-        # a2bar_hip = b*omega**2*np.sin(omega*self.t)
-        # self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
+        omega = 12*np.pi   # rad/s (6 Hz)
+        a = 1   # nondimensionalized, hoop traces circle
+        b = 1
+        x1bar_hip = a*np.cos(omega*self.t)
+        x2bar_hip = b*np.sin(omega*self.t)
+        self.xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
+        v1bar_hip = a*omega*np.cos(omega*self.t)
+        v2bar_hip = b*omega*np.sin(omega*self.t)
+        self.vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
+        a1bar_hip = a*omega**2*np.cos(omega*self.t)
+        a2bar_hip = b*omega**2*np.sin(omega*self.t)
+        self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
         self.xbar_hip = np.zeros((self.ntime,3))
         self.vbar_hip = np.zeros((self.ntime,3))
         self.abar_hip = np.zeros((self.ntime,3))
-        self.omega_hip = np.array([0,0,0])   # angular velocity of hip
-        self.alpha_hip = np.array([0,0,0])   # angular acceleration of hip
+        self.omega_hip = np.array([0,0,0])  # angular velocity of hip
+        self.alpha_hip = np.array([0,0,0])  # angular acceleration of hip
         # hoop properties
-        self.m = 0.2/m_nd      # mass of hoop
-        self.R_hoop = 1.2/l_nd           # radius of hoop
-        self.It = 0.5*self.m*self.R_hoop**2   # rotational inertia of hoop about diameter
-        self.Ia = self.m*self.R_hoop**2       # rotational inertia of hoop about axis passing through center perp to hoop plane
+        self.m = 15.6                       # nondimensionalized, mass of hoop
+        self.R_hoop = 7.4                   # nondimensionalized, radius of hoop
+        self.It = 0.5*self.m*self.R_hoop**2 # rotational inertia of hoop about diameter
+        self.Ia = self.m*self.R_hoop**2     # rotational inertia of hoop about axis passing through center perp to hoop plane
         # nondimensional constants
-        self.ndof = 6               # total number of degress of freedom
-        self.gr = 9.81/a_nd    # gravitational acceleration
+        self.ndof = 6           # total number of degress of freedom
+        self.gr = 9.81/a_nd     # gravitational acceleration
         # constraint count
-        self.ng = 0          # number of constraints at position level
-        self.ngamma = 0      # number of constraints at velocity level
-        self.nN = 2          # number of gap distance constraints
-        self.nF = 4          # number of friction constraints
+        self.ng = 0             # number of constraints at position level
+        self.ngamma = 0         # number of constraints at velocity level
+        self.nN = 2             # number of gap distance constraints
+        self.nF = 4             # number of friction constraints
         self.gammaF_lim = np.array([[0,1],[2,3]])    # connectivities of friction and normal forces
         self.nX = 3*self.ndof+3*self.ng+2*self.ngamma+3*self.nN+2*self.nF     # total number of constraints with their derivative
         # fixed basis vectors
@@ -174,8 +174,8 @@ class Simulation:
         self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
         # initial position
         # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
-        self.R_hip = get_R_hip(0, 0)
-        q0 = np.array([self.R_hip-self.R_hoop+0.001, 0, 0, 0, 0, 0])
+        self.R_hip = get_R_hip(-10, 0)
+        q0 = np.array([self.R_hip-self.R_hoop+0.001, 0, -10, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
         u0 = np.array([-1, 0, 0, 0, 0, 10])
@@ -183,10 +183,10 @@ class Simulation:
         # multiple solution parameters
         self.total_leaves = 0
         # array to keep track of bifurcations
-        self.bif_tracker = np.empty((0,2))
+        self.bif_tracker = np.zeros((1,3))
         
         # creating an output file f to log major happenings
-        self.f = open(f"{self.output_path}/log_file.txt",'a')
+        self.f = open(f"{self.output_path}/log_file.txt",'w')
 
         # Bind the function to the class
         from contact_constraints_fixed_hip import get_contact_constraints_cone
@@ -833,7 +833,7 @@ class Simulation:
                     except Exception as e:
                         print(e)
                         self.delete_leaf(leaf)
-                        self.f.write(f"  Raised error {e}. Deleted leaf = {leaf}.")
+                        self.f.write(f"  Raised error {e}. Abandoned leaf = {leaf}.")
 
                         print(f"I need to implement increasing maxiter_n or increasing rho_inf.")
                         # solution: increment maxitern
@@ -845,14 +845,15 @@ class Simulation:
                     
     def delete_leaf(self,leaf):
         ''' delete leaf that did not converge: decrement saved arrays'''
-        self.q_save = np.delete(self.q_save,leaf,0)
-        self.u_save = np.delete(self.u_save,leaf,0)
-        self.X_save = np.delete(self.X_save,leaf,0)
-        self.gNdot_save = np.delete(self.gNdot_save,leaf,0)
-        self.gammaF_save = np.delete(self.gammaF_save,leaf,0)
-        self.AV_save = np.delete(self.AV_save,leaf,0)
-        self.contacts_save = np.delete(self.contacts_save,leaf,0)
-        self.total_leaves = self.total_leaves-1
+        # self.q_save = np.delete(self.q_save,leaf,0)
+        # self.u_save = np.delete(self.u_save,leaf,0)
+        # self.X_save = np.delete(self.X_save,leaf,0)
+        # self.gNdot_save = np.delete(self.gNdot_save,leaf,0)
+        # self.gammaF_save = np.delete(self.gammaF_save,leaf,0)
+        # self.AV_save = np.delete(self.AV_save,leaf,0)
+        # self.contacts_save = np.delete(self.contacts_save,leaf,0)
+        # self.total_leaves = self.total_leaves-1
+        pass
                             
     def solve_A(self):
         leaf = 0
@@ -863,9 +864,28 @@ class Simulation:
             iter = 1
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
-                self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
+                if convergence_counter == 0:
+                    # none of the leaves converged, the current leaf was abandoned
+                    # move on to next leaf
+                    break
+                else:
+                    new_row = np.array([[leaf, iter, convergence_counter]])
+                    self.bif_tracker = np.vstack([self.bif_tracker, new_row])
+
                 iter += 1
-            leaf += convergence_counter
+            
+            leaf = leaf+1
+            # look at q_save, determine index of first zero entry, this should be the index where you start
+            q_leaf = self.q_save[leaf,:,:]
+            # Find time indices where all 6 entries are zero
+            zero_indices = np.all(q_leaf == 0, axis=0)  # shape: (2000,)
+            if zero_indices.size > 0:
+                iter = zero_indices[0]
+                print("Continue from iteration:", iter)
+            else:
+                print("No zero entries found.")
+                break
+
 
     def solve_B(self):
         leaf = 0
@@ -876,7 +896,8 @@ class Simulation:
             leaf = 0
             while leaf < self.total_leaves:
                 convergence_counter = self.time_update(iter, leaf)
-                self.bif_tracker = np.vstack([leaf,iter,convergence_counter])
+                new_row = np.array([[leaf, iter, convergence_counter]])
+                self.bif_tracker = np.vstack([self.bif_tracker, new_row])
                 leaf += convergence_counter
             iter += 1
 
