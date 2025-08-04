@@ -1,4 +1,4 @@
-output_directory = "/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/2025-07-30_19-50-41";
+output_directory = "/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/2025-08-04_12-06-41";
 
 % Loading the outputs of the generalized-alpha algorithm
 load(output_directory+"/q.mat")
@@ -16,21 +16,23 @@ box on
 
 %% Plotting cone prep
 % Parameters
-hib_base_radius = cot(pi/3);  % base radius
-hip_height = 1;         % height
+hib_base_radius = 20*cot(80/180*pi);  % base radius
+hip_height = 20;         % height
 hip_n = 50;             % resolution
 
 % Meshgrid in polar coordinates
 gamma = linspace(0, 2*pi, hip_n);
-z = linspace(0, hip_height, hip_n);
+z = linspace(-hip_height,0, hip_n);
 [Gamma, Z] = meshgrid(gamma, z);
 
 % Radius decreases linearly with height
-R = hib_base_radius * (1 - Z/hip_height);
+% R = hib_base_radius * (1 - Z/hip_height);
+R = -hib_base_radius * Z/hip_height;
 
 % Convert to Cartesian coordinates
 X = R .* cos(Gamma);
 Y = R .* sin(Gamma);
+% Z = Z;
 
 %% Animating Hoop
 figure()
@@ -46,7 +48,7 @@ E2 = [0;1;0];
 E3 = [0;0;1];
 
 ang_arr = linspace(0,2*pi,100);
-R_hoop = 1.2;
+R_hoop = 7.4;
 
 k = 1;
 
@@ -62,13 +64,7 @@ for p = 1:3
     colormap turbo
 end
 
-for i = 1:600 %1:length(q(k,1,:))
-    
-    % view(0,30)
-    % view(1)
-    % xlim([-2, 2])
-    % ylim([-2, 2])
-    % zlim([-0.5, 2])
+for i = 1:9 %500 %1:length(q(k,1,:))
 
     x1 = q(k,1,i);
     x2 = q(k,2,i);
@@ -114,11 +110,6 @@ for i = 1:600 %1:length(q(k,1,:))
         subplot(1,3,p)  
         hold on
 
-        % % Plot cone
-        % surf(X, Y, Z)
-        % shading interp
-        % colormap turbo
-
         % Plot hoop
         center_plot(p) = plot3(x1, x2, x3, 'Marker', '.', 'MarkerSize', 10);
     
@@ -131,11 +122,19 @@ for i = 1:600 %1:length(q(k,1,:))
             x2+R_hoop*cos(ang_arr)*e1(2)+R_hoop*sin(ang_arr)*e2(2), ...
             x3+R_hoop*cos(ang_arr)*e1(3)+R_hoop*sin(ang_arr)*e2(3), ...
             'color','b','LineWidth',2);
+        % Compute full arrays for x, y, z coordinates of the hoop
+        x_plot = x1(1) + R_hoop * cos(ang_arr) * e1(1) + R_hoop * sin(ang_arr) * e2(1);
+        y_plot = x2(1) + R_hoop * cos(ang_arr) * e1(2) + R_hoop * sin(ang_arr) * e2(2);
+        z_plot = x3(1) + R_hoop * cos(ang_arr) * e1(3) + R_hoop * sin(ang_arr) * e2(3);
+        
+        % Store the plot handle (assuming marker is a preallocated array or you’re growing it)
+        marker(p) = plot3(x_plot, y_plot, z_plot, 'color', 'b', 'LineWidth', 2);
+
     
         axis equal
-        xlim([-2, 2])
-        ylim([-2, 2])
-        zlim([-0.5, 2])
+        % xlim([-2, 2])
+        % ylim([-2, 2])
+        % zlim([-2, 2])
         
         xlabel('X')
         ylabel('Y')
@@ -200,11 +199,11 @@ z = q(k,3,:);
 z = squeeze(z); 
 plot(z,'.')
 
-for k = 1:29
-    figure()
-    z = q(k,3,:);
-    z = squeeze(z); 
-    plot(z,'.')
-end
+% for k = 1:29
+%     figure()
+%     z = q(k,3,:);
+%     z = squeeze(z); 
+%     plot(z,'.')
+% end
 
 

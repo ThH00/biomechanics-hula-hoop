@@ -9,9 +9,6 @@ tau = sp.symbols('tau')
 # radius of hoop
 R_hoop = sp.symbols('R_hoop')
 
-# radius of hip
-R_hip = sp.symbols('R_hip')
-
 E1 = np.array([1,0,0])
 E2 = np.array([0,1,0])
 E3 = np.array([0,0,1])
@@ -83,9 +80,9 @@ def get_R_hip(z, tau):
         n = 2*x/a**2*Ex+2*y/a**2*Ey+2*z/c**2*Ez
     '''
     # Conical hip
-    beta = np.pi/3
-    l = 1
-    R_hip = (l-z)*1/np.tan(beta)
+    beta = 80/180*np.pi
+    l = 20
+    R_hip = -z/np.tan(beta)
     er = sp.cos(tau)*E1+sp.sin(tau)*E2
     n = sp.sin(beta)*er+sp.cos(beta)*E3
 
