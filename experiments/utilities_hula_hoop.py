@@ -2,6 +2,7 @@
 Data analysis functions for hula hooping acceleration
 and angular data records.
 Includes steady interval detection, rotation extraction,
+acceleration extraction in the fixed frame, 
 initial position calculation, and modal analysis.
 """
 
@@ -71,7 +72,8 @@ def extract_rotation(phi, theta, psi,
                      E3=np.array([0,0,1])):
     """
     From Euler angles psi on E3, theta on e2', and phi on e1'',
-    extract the local basis (e1,e2,e3)
+    extract the local basis (e1,e2,e3) in terms of the fixed
+    basis (E1,E2,E3)
     """
     # First rotation by an angle psi about E3
     e1p =  np.cos(psi)*E1 + np.sin(psi)*E2
@@ -88,7 +90,28 @@ def extract_rotation(phi, theta, psi,
 
     return e1, e2, e3
 
-def offset_sensor(phi0,theta0,psi0,
+def get_fixed_frame_acceleration(ax, ay, az,
+                                 psi, theta, phi,
+                                 E1=np.array([1,0,0]),
+                                 E2=np.array([0,1,0]),
+                                 E3=np.array([0,0,1])):
+
+    n = np.size(psi)
+    a = np.zeros((3,n))
+
+    for i in range(n):
+        e1,e2,e3 = extract_rotation(phi[i],theta[i],psi[i],
+                                    E1=E1,E2=E2,E3=E3)
+        # acceleration in fixed frame
+        a[:,i] = ax[i]*e1 + ay[i]*e2 + az[i]*e3
+    # a = A1*E1+A2*E2+A3*E3
+    Ax = a[0,:]
+    Ay = a[1,:]
+    Az = a[2,:]
+
+    return Ax, Ay, Az
+
+def offset_hoop_sensor(phi0,theta0,psi0,
                   dx0,dy0,dz0,
                   angle_along_hoop=141.5,
                   radius=83.0/100/2):
@@ -128,11 +151,27 @@ def estimate_period(signal, method='psd',
         fundamental_p, fundamental_a = modal.spectrum_modes(periods, amplitudes,
                                                             sorted_by='height')
         if plot:
-            plt.plot(periods,amplitudes)
+            fig,ax = plt.subplots()
+            ax.plot(periods,amplitudes)
+            ax.set_xlim(0,2)
+            ax.set_title('Fast Fourier Transform')
+            ax.set_xlabel('Period (s)')
+            ax.set_ylabel('Amplitude')
+            plt.show()
         return fundamental_p[0]
     elif method == 'psd':
-        P,Phi = outid(signal, dt=1/fs)
-        return P[0]
+        periods, amplitudes = transform.power_spectrum(signal, step=1/fs)
+        fundamental_p, fundamental_a = modal.spectrum_modes(periods, amplitudes,
+                                                            sorted_by='height')
+        if plot:
+            fig,ax = plt.subplots()
+            ax.plot(periods,amplitudes)
+            ax.set_xlim(0,2)
+            ax.set_title('Power Spectral Density')
+            ax.set_xlabel('Period (s)')
+            ax.set_ylabel('Amplitude')
+            plt.show()
+        return fundamental_p[0]
     elif method == 'srim':
         if inputs == None:
             inputs = np.random.normal(loc=0, scale=1, size=signal.size)
