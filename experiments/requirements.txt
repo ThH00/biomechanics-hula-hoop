@@ -2,3 +2,10 @@ veux>=0.0.33
 scipy
 meshio
 numpy
+scikit-learn
+mdof
+plotly
+matplotlib
+ipympl
+ipywidgets
+nbformat
