@@ -100,7 +100,7 @@ def get_position(time,
 
     return displ_x, displ_y, displ_z, veloc_x, veloc_y, veloc_z
 
-def lowpass_filter(signal, cutoff, fs=120, order=4):
+def lowpass_filter(signal, cutoff, fs=120, order=4, plot=False):
     """
     Apply a Butterworth low-pass filter to remove high-frequency noise.
 
@@ -118,16 +118,15 @@ def lowpass_filter(signal, cutoff, fs=120, order=4):
     b, a = butter(order, normal_cutoff, btype='low', analog=False)
     filtered = filtfilt(b, a, signal)
 
-    # Plotting
-    plt.figure(figsize=(10, 4))
-    plt.plot(signal, label='Noisy signal', alpha=0.6)
-    plt.plot(filtered, label='Filtered signal', linewidth=2)
-    plt.legend()
-    plt.ylabel('Amplitude')
-    plt.title('Low-pass Filter to Remove High-Frequency Noise')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    if plot:
+        fig,ax = plt.subplots(figsize=(10, 4),tight_layout=True)
+        ax.plot(signal, label='Noisy signal', alpha=0.6)
+        ax.plot(filtered, label='Filtered signal', linewidth=2)
+        ax.legend()
+        ax.set_ylabel('Amplitude')
+        ax.set_title('Low-pass Filter to Remove High-Frequency Noise')
+        ax.grid(True)
+        plt.show()
 
     return filtered
 
