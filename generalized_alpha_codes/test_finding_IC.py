@@ -113,9 +113,9 @@ class Simulation:
         a1bar_hip = a*omega**2*np.cos(omega*self.t)
         a2bar_hip = b*omega**2*np.sin(omega*self.t)
         self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
-        # self.xbar_hip = np.zeros((self.ntime,3))
-        # self.vbar_hip = np.zeros((self.ntime,3))
-        # self.abar_hip = np.zeros((self.ntime,3))
+        self.xbar_hip = np.zeros((self.ntime,3))
+        self.vbar_hip = np.zeros((self.ntime,3))
+        self.abar_hip = np.zeros((self.ntime,3))
         self.omega_hip = np.array([0,0,0])  # angular velocity of hip
         self.alpha_hip = np.array([0,0,0])  # angular acceleration of hip
         # hoop properties
@@ -175,10 +175,10 @@ class Simulation:
         # initial position
         # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         self.R_hip = get_R_hip(-10, 0)
-        q0 = np.array([self.R_hip-self.R_hoop+0.001, 0, -9, 0, 0, 0])
+        q0 = np.array([self.R_hip-self.R_hoop+0.001, 0, -10, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([0, 0, 0, 0, 0, 2])
+        u0 = np.array([-1, 0, 0, 0, 0, 10])
         self.u_save[0,:,0] = u0
         # multiple solution parameters
         self.total_leaves = 0
@@ -861,6 +861,7 @@ class Simulation:
 
         while leaf <= self.total_leaves:
             self.f.write(f"  Increment leaf = {leaf}. iter = {iter}.")
+            iter = 1
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
                 if convergence_counter == 0:
@@ -873,21 +874,17 @@ class Simulation:
 
                 iter += 1
             
-            # if we are not at last leaf, move on to next leaf
-            if leaf < self.total_leaves-1:
-                leaf = leaf+1
-                # look at q_save, determine index of first zero entry, this should be the index where you start
-                q_leaf = self.q_save[leaf,:,:]
-                # Find time indices where all 6 entries are zero
-                zero_indices = np.all(q_leaf == 0, axis=0)  # shape: (2000,)
-                if zero_indices.size > 0:
-                    iter = np.argmax(zero_indices)
-                    print("Continue from iteration:", iter)
-                else:
-                    print("No zero entries found.")
-                    break
+            leaf = leaf+1
+            # look at q_save, determine index of first zero entry, this should be the index where you start
+            q_leaf = self.q_save[leaf,:,:]
+            # Find time indices where all 6 entries are zero
+            zero_indices = np.all(q_leaf == 0, axis=0)  # shape: (2000,)
+            if zero_indices.size > 0:
+                iter = zero_indices[0]
+                print("Continue from iteration:", iter)
             else:
-                return
+                print("No zero entries found.")
+                break
 
 
     def solve_B(self):
@@ -914,5 +911,5 @@ class Simulation:
 
 # hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
 # # Test ibi and bbb
-test = Simulation(ntime = 100, mu_s=1, mu_k=0.8, eN=0, eF=0, max_leaves=5)
+test = Simulation(ntime = 2000, mu_s=1, mu_k=0.3, eN=0, eF=0, max_leaves=5)
 test.solve_A()
