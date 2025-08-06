@@ -54,11 +54,11 @@ class JacobianBlowingUpError(Exception):
         super().__init__(self.message)
 
 class Simulation:
-    def __init__(self, ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5):
+    def __init__(self, ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5, z0=-10, dphi0=2, output_path="outputs"):
         # path for outputs
         # Generate timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        outputs_dir = f"outputs/{timestamp}"
+        outputs_dir = f"{output_path}/{timestamp}"
         self.output_path = os.path.join(os.getcwd(), outputs_dir)  # Output path
         os.makedirs(self.output_path, exist_ok=True)
 
@@ -175,10 +175,10 @@ class Simulation:
         # initial position
         # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         self.R_hip = get_R_hip(-10, 0)
-        q0 = np.array([self.R_hip-self.R_hoop+0.001, 0, -9, 0, 0, 0])
+        q0 = np.array([self.R_hip-self.R_hoop+0.001, 0, z0, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
-        u0 = np.array([0, 0, 0, 0, 0, 2])
+        u0 = np.array([0, 0, 0, 0, 0, dphi0])
         self.u_save[0,:,0] = u0
         # multiple solution parameters
         self.total_leaves = 0
@@ -912,7 +912,9 @@ class Simulation:
 # self.n_tau = int(1/self.tol_n)
         
 
-# hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
-# # Test ibi and bbb
-test = Simulation(ntime = 100, mu_s=1, mu_k=0.8, eN=0, eF=0, max_leaves=5)
-test.solve_A()
+# # hoop sticking and rotating, mu_s=10**9, u0 = np.array([-0.1, 0, 0, 0, 0, 10])
+# # # Test ibi and bbb
+# test = Simulation(ntime = 100, mu_s=1, mu_k=0.8, eN=0, eF=0, max_leaves=5)
+# test.solve_A()
+
+
