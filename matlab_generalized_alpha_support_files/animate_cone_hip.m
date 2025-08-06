@@ -1,4 +1,4 @@
-output_directory = "/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/2025-08-04_12-06-41";
+output_directory = "/Users/theresahonein/Desktop/terryhonein/Research-HulaHoop/outputs/2025-08-06_09-01-28";
 
 % Loading the outputs of the generalized-alpha algorithm
 load(output_directory+"/q.mat")
@@ -64,7 +64,7 @@ for p = 1:3
     colormap turbo
 end
 
-for i = 1:9 %500 %1:length(q(k,1,:))
+for i = 1:47  %1:length(q(k,1,:))
 
     x1 = q(k,1,i);
     x2 = q(k,2,i);
@@ -128,13 +128,13 @@ for i = 1:9 %500 %1:length(q(k,1,:))
         z_plot = x3(1) + R_hoop * cos(ang_arr) * e1(3) + R_hoop * sin(ang_arr) * e2(3);
         
         % Store the plot handle (assuming marker is a preallocated array or you’re growing it)
-        marker(p) = plot3(x_plot, y_plot, z_plot, 'color', 'b', 'LineWidth', 2);
+        marker(p) = plot3(x_plot(1), y_plot(2), z_plot(3),'*' ,'color', 'r', 'LineWidth', 2);
 
     
         axis equal
-        % xlim([-2, 2])
-        % ylim([-2, 2])
-        % zlim([-2, 2])
+        xlim([-20, 20])
+        ylim([-20, 20])
+        zlim([-20, 20])
         
         xlabel('X')
         ylabel('Y')
@@ -166,6 +166,7 @@ for i = 1:9 %500 %1:length(q(k,1,:))
         delete(e2_plot(p))
         delete(e3_plot(p))
         delete(circle(p))
+        delete(marker(p))
     end
 
     % delete(min_hoop)
@@ -194,12 +195,12 @@ subplot(1,3,3)
 title('phi')
 plot(q(:,6))
 
-%% 
-z = q(k,3,:);
-z = squeeze(z); 
-plot(z,'.')
-
-% for k = 1:29
+% %% 
+% z = q(k,3,:);
+% z = squeeze(z); 
+% plot(z,'.')
+% 
+% for k = 1:21
 %     figure()
 %     z = q(k,3,:);
 %     z = squeeze(z); 
