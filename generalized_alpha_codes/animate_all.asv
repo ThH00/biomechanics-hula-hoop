@@ -1,0 +1,38 @@
+function animate_all(folderPath)
+% findAndProcessQ Recursively searches for 'q.mat' files and processes them.
+%   findAndProcessQ(folderPath) takes a folder path, loops through its
+%   subfolders, and executes a user-defined action if it finds 'q.mat'.
+%   It handles nested folders by calling itself.
+
+    % Get a list of all contents in the specified folder
+    % 'd' is a structure array with fields like name, folder, datenum, etc.
+    d = dir(folderPath);
+
+    % Loop through each item in the folder
+    for i = 1:length(d)
+        % Get the current item's name
+        item = d(i);
+        
+        % Skip '.' and '..' which represent the current and parent directories
+        if strcmp(item.name, '.') || strcmp(item.name, '..')
+            continue;
+        end
+        
+        % Construct the full path of the current item
+        fullPath = fullfile(folderPath, item.name);
+        
+        % Check if the item is a directory
+        if item.isdir
+            % It's a folder, so we call this function again on it
+            fprintf('Searching in subfolder: %s\n', fullPath);
+            anima(fullPath);
+        else
+            % It's a file, check if it's 'q.mat'
+            if strcmp(item.name, 'q.mat')
+                fprintf('Found q.mat in folder: %s\n', folderPath);
+                
+                % add code here
+            end
+        end
+    end
+end

@@ -54,7 +54,10 @@ class JacobianBlowingUpError(Exception):
         super().__init__(self.message)
 
 class Simulation:
-    def __init__(self, ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=5, z0=-10, dphi0=2, output_path="outputs"):
+    def __init__(self, ntime = 5, mu_s=10**9, mu_k=0.3, eN=0, eF=0, max_leaves=10, z0=-10, dphi0=2, output_path="outputs"):
+        
+        self.max_leaves = max_leaves
+
         # path for outputs
         # Generate timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -79,7 +82,7 @@ class Simulation:
         a_nd = 9.81         # m/(s**2), acceleration nondimensionalization parameter
         t_nd = np.sqrt(l_nd/a_nd)   # s, time nondimensionalization parameter
         # simulation (time) parameters
-        self.dtime = 2e-3/t_nd  # time step duration
+        self.dtime = 1e-3  # time step duration
         self.ntime = ntime      # number of iterations
         self.tf = self.ntime*self.dtime            # final time
         self.t = np.linspace(0,self.tf,self.ntime) # time array
@@ -175,7 +178,7 @@ class Simulation:
         # initial position
         # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
         self.R_hip = get_R_hip(-10, 0)
-        q0 = np.array([self.R_hip-self.R_hoop+0.001, 0, z0, 0, 0, 0])
+        q0 = np.array([self.R_hip-self.R_hoop+x1bar_hip[0]+0.001, 0, z0, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
         u0 = np.array([0, 0, 0, 0, 0, dphi0])
@@ -859,7 +862,7 @@ class Simulation:
         leaf = 0
         iter = 1
 
-        while leaf <= self.total_leaves:
+        while leaf <= self.max_leaves: # self.total_leaves:
             self.f.write(f"  Increment leaf = {leaf}. iter = {iter}.")
             while iter < self.ntime:
                 convergence_counter = self.time_update(iter, leaf)
