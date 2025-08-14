@@ -68,7 +68,7 @@ function animate_all(folderPath)
                 figure()
                 hold on
                 
-                for k = 1:length(q(:,1,1))
+                for k = 1:min(length(q(:,1,1)),10)
                 
                     animation = VideoWriter(folderPath+"/animation_"+k+".mp4", 'MPEG-4');
                     animation.FrameRate = 30;
@@ -85,9 +85,12 @@ function animate_all(folderPath)
                     view_array = [15,15;90,0;0,90];
                     % isometric, front, top
                     
+                    % find last nonzero column of q(k,:,:)
+                    lastNonZero = find(any(squeeze(q(k,:,:)) ~= 0, 1), 1, 'last');
+                    qk = squeeze(q(k,:,:));
+                    qk = qk(:, 1:lastNonZero);
                     
-                    
-                    for i = 1:length(q(k,1,:))
+                    for i = 1:length(qk(1,:))
                     
                         for p = 1:3
                             subplot(1,3,p)
@@ -98,13 +101,13 @@ function animate_all(folderPath)
                             colormap turbo
                         end
                     
-                        x1 = q(k,1,i);
-                        x2 = q(k,2,i);
-                        x3 = q(k,3,i);
+                        x1 = qk(1,i);
+                        x2 = qk(2,i);
+                        x3 = qk(3,i);
                     
-                        psi = q(k,4,i);
-                        theta = q(k,5,i);
-                        phi = q(k,6,i);
+                        psi = qk(4,i);
+                        theta = qk(5,i);
+                        phi = qk(6,i);
                         
                         %% basis vectors
                         % Rotation matrices
