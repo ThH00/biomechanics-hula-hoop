@@ -78,25 +78,26 @@ def get_position(time,
                  accel_y,
                  accel_z,
                  detrended=True,
-                 degree=6):
+                 degree=6,
+                 initial=None):
     
-    veloc_x = integrate(y=accel_x,x=time)
-    veloc_y = integrate(y=accel_y,x=time)
-    veloc_z = integrate(y=accel_z,x=time)
+    veloc_x = integrate(y=accel_x,x=time, initial=initial)
+    veloc_y = integrate(y=accel_y,x=time, initial=initial)
+    veloc_z = integrate(y=accel_z,x=time, initial=initial)
     
     if detrended:
-        veloc_x = detrend(time[1:], veloc_x, degree=degree)
-        veloc_y = detrend(time[1:], veloc_y, degree=degree)
-        veloc_z = detrend(time[1:], veloc_z, degree=degree)
+        veloc_x = detrend(time, veloc_x, degree=degree)
+        veloc_y = detrend(time, veloc_y, degree=degree)
+        veloc_z = detrend(time, veloc_z, degree=degree)
 
-    displ_x = integrate(y=veloc_x,x=time[1:])
-    displ_y = integrate(y=veloc_y,x=time[1:])
-    displ_z = integrate(y=veloc_z,x=time[1:])
+    displ_x = integrate(y=veloc_x,x=time,initial=initial)
+    displ_y = integrate(y=veloc_y,x=time,initial=initial)
+    displ_z = integrate(y=veloc_z,x=time,initial=initial)
 
     if detrended:
-        displ_x = detrend(time[2:], displ_x, degree=degree)
-        displ_y = detrend(time[2:], displ_y, degree=degree)
-        displ_z = detrend(time[2:], displ_z, degree=degree)
+        displ_x = detrend(time, displ_x, degree=degree)
+        displ_y = detrend(time, displ_y, degree=degree)
+        displ_z = detrend(time, displ_z, degree=degree)
 
     return displ_x, displ_y, displ_z, veloc_x, veloc_y, veloc_z
 
