@@ -107,14 +107,14 @@ class Simulation:
         omega = 12*np.pi   # rad/s (6 Hz)
         a = 1   # nondimensionalized, hoop traces circle
         b = 1
-        x1bar_hip = a*np.cos(omega*self.t)
-        x2bar_hip = b*np.sin(omega*self.t)
+        x1bar_hip = a*np.sin(omega*self.t)
+        x2bar_hip = b*np.cos(omega*self.t)
         self.xbar_hip = np.column_stack((x1bar_hip, x2bar_hip, np.zeros(ntime)))
         v1bar_hip = a*omega*np.cos(omega*self.t)
-        v2bar_hip = b*omega*np.sin(omega*self.t)
+        v2bar_hip = -b*omega*np.sin(omega*self.t)
         self.vbar_hip = np.column_stack((v1bar_hip, v2bar_hip, np.zeros(ntime)))
-        a1bar_hip = a*omega**2*np.cos(omega*self.t)
-        a2bar_hip = b*omega**2*np.sin(omega*self.t)
+        a1bar_hip = -a*omega**2*np.sin(omega*self.t)
+        a2bar_hip = -b*omega**2*np.cos(omega*self.t)
         self.abar_hip = np.column_stack((a1bar_hip, a2bar_hip, np.zeros(ntime)))
         # self.xbar_hip = np.zeros((self.ntime,3))
         # self.vbar_hip = np.zeros((self.ntime,3))
@@ -177,8 +177,8 @@ class Simulation:
         self.contacts_save = np.zeros((1,5*self.nN,self.ntime))
         # initial position
         # q0 = np.array([a+self.R_hip-self.R_hoop, 0, 0, 0, 0, 0])
-        self.R_hip = get_R_hip(-10, 0)
-        q0 = np.array([self.R_hip-self.R_hoop+x1bar_hip[0]+0.001, 0, z0, 0, 0, 0])
+        self.R_hip = get_R_hip(z0, 0)
+        q0 = np.array([self.R_hip-self.R_hoop+x1bar_hip[0]+0.001, x2bar_hip[0], z0, 0, 0, 0])
         self.q_save[0,:,0] = q0
         # initial velocity
         u0 = np.array([0, 0, 0, 0, 0, dphi0])
