@@ -1,86 +1,74 @@
-import os
-import argparse
-from datetime import datetime
-from main3D_conical_translating_hip import Simulation 
-import sys
 import numpy as np
+from pyunicorn.timeseries import InterSystemRecurrenceNetwork
+import networkx as nx
+import plotly.graph_objects as go
 
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
+# --- Your original data ---
+time_steps = 1000
+dimensions = 6
 
-ARGS_NAMES = ['ntime', 'mus', 'muk', 'eN', 'eF', 'maxleaves', 'z0', 'dphi0']
+sensor_a_data = np.random.rand(time_steps, dimensions) + np.sin(np.linspace(0, 10 * np.pi, time_steps))[:, np.newaxis]
+sensor_b_data = np.random.rand(time_steps, dimensions) + np.cos(np.linspace(0, 10 * np.pi, time_steps))[:, np.newaxis]
 
-# Generate timestamp
-timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-outputs_dir = f"outputs/experiment{timestamp}"
-input_file = "inputs_conical_translating_hip"
+network = InterSystemRecurrenceNetwork(
+    sensor_a_data,
+    sensor_b_data,
+    recurrence_rate=(0.05, 0.05, 0.05),
+    metric="euclidean"
+)
 
-# Check if the input file exists
-if not os.path.isfile(input_file):
-    print(f"Input file '{input_file}' not found.")
-    exit(1)
+print("Number of links:", network.n_links)
+print("Average path length:", network.average_path_length())
 
+# --- Get adjacency & graph ---
+adj_matrix = network.adjacency
+n_nodes = adj_matrix.shape[0]
+n_A = sensor_a_data.shape[1]   # dimensions for A
 
-def do_run(args, args_list):
-    print(f"Running with args: {[(f'{ARGS_NAMES[i]}: {arg}') for i, arg in enumerate(args_list)]}")
-    
-    # Create output directory for this run
-    run_output_dir = f"{outputs_dir}/{'_'.join([(f'{ARGS_NAMES[i]}{arg}') for i, arg in enumerate(args_list)])}"
-    os.makedirs(run_output_dir, exist_ok=True)
+G = nx.from_numpy_array(adj_matrix)
 
-    # Convert args_list to individual arguments
-    ntime, mu_s, mu_k, eN, eF, max_leaves, z0, dphi0 = args_list
+# --- 3D layout ---
+pos = nx.spring_layout(G, dim=3, seed=42)  # dict: node -> (x,y,z)
 
-    # Run the simulation
-    sim = Simulation(
-        ntime=int(ntime),
-        mu_s=mu_s,
-        mu_k=mu_k,
-        eN=eN,
-        eF=eF,
-        max_leaves=int(max_leaves),
-        z0=z0,
-        dphi0=dphi0,
-        output_path=run_output_dir
-    )
+# Extract node coordinates
+x_nodes = [pos[i][0] for i in range(n_nodes)]
+y_nodes = [pos[i][1] for i in range(n_nodes)]
+z_nodes = [pos[i][2] for i in range(n_nodes)]
 
-    # Redirect output (stdout) to file
-    stdout_path = os.path.join(run_output_dir, "stdout.out")
-    with open(stdout_path, 'w') as f:
-        old_stdout = sys.stdout
-        sys.stdout = f
-        try:
-            sim.solve_A()
-        finally:
-            sys.stdout = old_stdout
+# Extract edges as line segments
+edge_x, edge_y, edge_z = [], [], []
+for e in G.edges():
+    edge_x.extend([pos[e[0]][0], pos[e[1]][0], None])
+    edge_y.extend([pos[e[0]][1], pos[e[1]][1], None])
+    edge_z.extend([pos[e[0]][2], pos[e[1]][2], None])
 
-    print(f"Completed run. Output in: {run_output_dir}")
+# --- Build Plotly figure ---
+edge_trace = go.Scatter3d(
+    x=edge_x, y=edge_y, z=edge_z,
+    mode='lines',
+    line=dict(color='lightgray', width=1),
+    hoverinfo='none'
+)
 
+node_trace = go.Scatter3d(
+    x=x_nodes, y=y_nodes, z=z_nodes,
+    mode='markers',
+    marker=dict(
+        size=5,
+        color=['red' if i < n_A else 'blue' for i in range(n_nodes)],
+        opacity=0.8
+    ),
+    hovertext=[f"Node {i}" for i in range(n_nodes)],
+    hoverinfo='text'
+)
 
-def read_input_file(filepath):
-    """Read all datasets from the input file."""
-    datasets = []
-    with open(filepath, 'r') as f:
-        for line_number, line in enumerate(f, start=1):
-            line = line.strip()
-            if not line:
-                continue  # skip empty lines
-            values = line.split()
-            if len(values) != 8:
-                raise ValueError(f"Line {line_number}: must contain exactly 8 space-separated values.")
-            datasets.append([
-                int(values[0]),         # ntime
-                float(values[1]),       # mu_s
-                float(values[2]),       # mu_k
-                float(values[3]),       # eN
-                float(values[4]),       # eF
-                int(values[5]),         # max_leaves
-                float(values[6]),       # z0
-                float(values[7])        # dphi0
-            ])
-    return datasets
-
-
-if __name__ == "__main__":
-    all_datasets = read_input_file(input_file)
-    for dataset in all_datasets:
-        do_run(args=None, args_list=dataset)
+fig = go.Figure(data=[edge_trace, node_trace])
+fig.update_layout(
+    title="Inter-System Recurrence Network (3D)",
+    showlegend=False,
+    margin=dict(l=0, r=0, t=40, b=0),
+    scene=dict(xaxis=dict(showbackground=False),
+               yaxis=dict(showbackground=False),
+               zaxis=dict(showbackground=False))
+)
+fig.show()
