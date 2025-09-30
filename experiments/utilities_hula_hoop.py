@@ -214,3 +214,25 @@ def estimate_period_autocorr(signal, fs=120.0, plot=False):
         plt.show()
 
     return period_samples, period_time
+
+from scipy.fft import fft, fftfreq
+
+def fourier_spectrum(series, step):
+    """
+    Fourier amplitude spectrum of a signal, as a function of frequency.
+
+    :param series:      time series.
+    :type series:       1D array
+    :param step:        timestep.
+    :type step:         float
+
+    :return:            (frequencies, amplitudes)
+    :rtype:             tuple of arrays.
+    """
+    if series.ndim != 1:
+        raise ValueError("series must be a 1D array.")
+    N = len(series)
+    frequencies = fftfreq(N,step)[1:N//2]
+    amplitudes = 2.0/N*np.abs(fft(series)[1:N//2])
+
+    return frequencies, amplitudes
