@@ -3,7 +3,8 @@ Data analysis functions for hula hooping acceleration
 and angular data records.
 Includes steady interval detection, rotation extraction,
 acceleration extraction in the fixed frame, 
-initial position calculation, and modal analysis.
+initial position calculation, modal analysis,
+PCA, and plotting.
 """
 
 import numpy as np
@@ -270,7 +271,7 @@ def plot_PCA_FFT(X_pca,dt,subtitle,n_modes,xlim,colors=None):
     fig.suptitle(f"FFT, {subtitle}")
 
 
-def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None):
+def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_slice=None):
     sensors_to_plot = sensor_labels.keys()
     sensor_titles = list(sensor_labels.values())
     quantities = list(data_dict.values())[0].keys()
@@ -284,13 +285,15 @@ def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None):
     # Keep track of which legend items have been shown
     legend_shown = [False, False, False]
     
-    fig = make_subplots(rows=5, cols=1, subplot_titles=sensor_titles)
+    fig = make_subplots(rows=5, cols=1, subplot_titles=sensor_titles, shared_xaxes=True, x_title="Time (s)")
+    if active_slice is None:
+        active_slice = slice(0,-1)
     # Loop through each sensor and subplot
     for i, sensor in enumerate(sensors_to_plot, start=1):
         for j, q in enumerate(quantities):
             fig.add_trace(go.Scatter(
-                x=time, 
-                y=data_dict[sensor][q], 
+                x=time[active_slice], 
+                y=data_dict[sensor][q][active_slice], 
                 mode='lines', 
                 # name=f'{q.capitalize()}',
                 name=q,
@@ -309,7 +312,7 @@ def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None):
     fig.update_layout(
         height=800,width=800,
         title_text=title,
-        margin=dict(l=40, r=20, t=80, b=40),
+        margin=dict(l=40, r=20, t=80, b=60),
     )
 
     return fig
@@ -439,7 +442,7 @@ def plot_PCA_modes(eigenvectors,sensors_to_include,quantities_to_include,sensor_
     n_rows = n_modes
     x_vals = np.arange(len(quantity_labels))
 
-    fig, ax = plt.subplots(n_rows, 1, figsize=(6, 8), constrained_layout=True)
+    fig, ax = plt.subplots(n_rows, 1, figsize=(6, 2*n_modes), constrained_layout=True)
 
     for i in range(n_rows):
         ax[i].plot(x_vals, eigenvectors[i, :])
