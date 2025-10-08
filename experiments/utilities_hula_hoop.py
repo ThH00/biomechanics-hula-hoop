@@ -60,11 +60,11 @@ def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
 
     # Plot
     plt.figure(figsize=(10, 3))
-    plt.plot(t, psi, label='psi')
-    plt.plot(t, dpsi_dt, label='dpsi_dt')
+    plt.plot(t, psi, label=r"$\psi$")
+    plt.plot(t, dpsi_dt, label=r"$d\psi/dt$")
     for i, (start, end) in enumerate(groups):
         plt.axvspan(t[start], t[end], color='green', alpha=0.3, label='steady' if i == 0 else "")
-        plt.text((t[start]+t[end])/2, psi[start], f'{averages[i]:.2f}', color='black', fontsize=8, ha='center', va='bottom')
+        plt.text((t[start]+t[end])/2, psi[start], f'{averages[i]:.2f}', color='black', fontsize=12, ha='center', va='bottom')
     plt.legend()
     plt.tight_layout()
     plt.show()
@@ -292,7 +292,8 @@ def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None):
                 x=time, 
                 y=data_dict[sensor][q], 
                 mode='lines', 
-                name=f'{q.capitalize()}',
+                # name=f'{q.capitalize()}',
+                name=q,
                 # legendgroup=j,
                 line=dict(color=colors[j]),
                 showlegend=not legend_shown[j]
@@ -357,10 +358,10 @@ def perform_PCA(data_dict,active_slice,
     return X_pca, eigenvalues, eigenvectors, explained_variance_ratio
 
 def plot_PCA(X_pca,domain,active_slice,domain_label="Time (s)",subtitle=None,separate=False):
-
+    n_components = X_pca.shape[1]
     if separate:
         n = X_pca.shape[1]
-        fig, ax = plt.subplots(n,1,figsize=(8,8),constrained_layout=True)
+        fig, ax = plt.subplots(n,1,figsize=(8,n_components),constrained_layout=True)
         for i in range(n):
             if active_slice is not None:
                 ax[i].plot(domain[active_slice],X_pca[:,i]) 
@@ -383,7 +384,7 @@ def plot_PCA(X_pca,domain,active_slice,domain_label="Time (s)",subtitle=None,sep
         plt.show()
 
 def plot_PCA_eigenvalues(eigenvalues,subtitle=None):
-    plt.figure(figsize=(8, 4))
+    plt.figure(figsize=(8,4))
     plt.bar(range(1, len(eigenvalues) + 1), eigenvalues, color='skyblue', edgecolor='k')
     plt.xlabel('Principal Component')
     plt.ylabel('Eigenvalue')
