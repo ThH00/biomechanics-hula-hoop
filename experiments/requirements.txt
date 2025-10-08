@@ -9,3 +9,4 @@ matplotlib
 ipympl
 ipywidgets
 nbformat
+scienceplots
