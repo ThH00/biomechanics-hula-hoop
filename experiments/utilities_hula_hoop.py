@@ -466,3 +466,39 @@ def plot_PCA_modes(eigenvectors,sensors_to_include,quantities_to_include,sensor_
 
 def plot_PCA_modes_3D():
     return
+
+
+from stl import mesh
+
+def center_and_scale_stl(stl_mesh, desired_height):
+    """
+    Centers an STL mesh at the origin and scales it to a specific height.
+
+    Args:
+        input_file_path (str): The path to the input STL file.
+        output_file_path (str): The path to save the modified STL file.
+        desired_height (float): The target height for the scaled model.
+    """
+
+    # Calculate the bounding box of the mesh
+    min_coords = stl_mesh.vectors.min(axis=0).min(axis=0)
+    max_coords = stl_mesh.vectors.max(axis=0).max(axis=0)
+
+    # Calculate dimensions and center
+    width = max_coords[0] - min_coords[0]
+    depth = max_coords[1] - min_coords[1]
+    height = max_coords[2] - min_coords[2]
+    center_offset = (min_coords + max_coords) / 2
+
+    # Step 1: Center the mesh at the origin
+    # Subtract the center of the bounding box from all mesh points
+    stl_mesh.vectors -= center_offset
+
+    # Step 2: Scale the mesh to the desired height
+    # Calculate the uniform scaling factor
+    scale_factor = desired_height / height
+    
+    # Apply the scaling to all mesh points
+    stl_mesh.vectors *= scale_factor
+
+    return stl_mesh
