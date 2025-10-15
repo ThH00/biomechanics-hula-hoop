@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 from scipy.fft import fft, fftfreq
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-
+import warnings
 
 def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
     """
@@ -183,13 +183,19 @@ def estimate_period(signal, method='psd',
             inputs = np.random.normal(loc=0, scale=1, size=signal.size)
         P,Phi = modes(inputs=inputs, outputs=signal, dt=1/fs,
                       method='srim', order=2)
-        return P[0]
+        if len(P)>0:
+            return P[0]
+        else:
+            warnings.warn("No natural periods found by SRIM method.")
     elif method == 'okid':
         if inputs == None:
             inputs = np.random.normal(loc=0, scale=1, size=signal.size)
         P,Phi = modes(inputs=inputs, outputs=signal, dt=1/fs,
                      method='okid-era', order=2)
-        return P[0]
+        if len(P)>0:
+            return P[0]
+        else:
+            warnings.warn("No natural periods found by SRIM method.")
     elif method=='autocorr':
         period_samples,period_time = estimate_period_autocorr(signal,fs,plot)
         return period_time
@@ -438,20 +444,25 @@ def plot_PCA_phase_portait(X_pca,subtitle=None):
     plt.show()
 
 def plot_PCA_modes(eigenvectors,sensors_to_include,quantities_to_include,sensor_labels,n_modes):
-    quantity_labels = [f"{sensor_labels[s]}: {q}" for s in sensors_to_include for q in quantities_to_include]
+    n_sensors_total = eigenvectors.shape[1]
+    n_sensors = len(sensors_to_include)
+    n_quantities = len(quantities_to_include)
     n_rows = n_modes
-    n_sensors = eigenvectors.shape[1]
-    x_vals = np.arange(len(quantity_labels))
+    n_cols = n_sensors
+    x_vals = np.arange(n_quantities)
 
-    fig, ax = plt.subplots(n_rows, 1, figsize=(0.6*n_sensors, n_modes), constrained_layout=True, sharex=True)
+    _,ax = plt.subplots(n_rows, n_cols, figsize=(0.6*n_sensors_total, n_modes),
+                           constrained_layout=True, sharex=True, sharey=True)
 
-    for i in range(n_rows):
-        ax[i].stem(x_vals, eigenvectors[i, :])
-        ax[i].axhline(0, color='gray', linestyle='--', linewidth=0.8)
-        ax[i].set_xticks(x_vals)
-        ax[i].set_xticklabels(quantity_labels,rotation=45)
-        ax[i].set_ylim(-1, 1)
-        ax[i].set_title(rf"$\xi_{{{i+1}}}$")
+    for i in range(n_rows): # Each row is a mode with n_senors sensors
+        for j in range(n_cols): # Each column is a sensor with n_quantities quantities
+            ax[i,j].stem(x_vals, eigenvectors[i, n_quantities*j:n_quantities*(j+1)])
+            ax[i,j].axhline(0, color='gray', linestyle='--', linewidth=0.8)
+            ax[i,j].set_xticks(x_vals)
+            ax[i,j].set_xticklabels(quantities_to_include,rotation=45)
+            ax[-1,j].set_xlabel(sensor_labels[sensors_to_include[j]])
+            ax[i,j].set_ylim(-1, 1)
+        ax[i,0].set_ylabel(rf"$\xi_{{{i+1}}}$")
 
 def plot_PCA_modes_3D():
     return
