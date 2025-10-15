@@ -10,3 +10,4 @@ ipympl
 ipywidgets
 nbformat
 scienceplots
+numpy-stl
