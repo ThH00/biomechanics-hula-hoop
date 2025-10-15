@@ -22,4 +22,7 @@ plt.rcParams.update({'font.size': 16,       # Default font size for general text
                     'axes.labelsize': 16,   # Font size for axis labels
                     'xtick.labelsize': 14,  # Font size for x-axis tick labels
                     'ytick.labelsize': 14,  # Font size for y-axis tick labels
-                    'legend.fontsize': 14}) # Font size for legend
+                    'legend.fontsize': 14,  # Font size for legend
+                    'xtick.minor.visible': False, # Minor x ticks
+                    'ytick.minor.visible': False, # Minor y ticks
+                    })
