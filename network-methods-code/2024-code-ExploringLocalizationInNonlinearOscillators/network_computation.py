@@ -137,6 +137,8 @@ def compute_functional_network(sol, rr, **kwargs):
     C_yxs = np.zeros((n, n))
     T_xys = np.zeros((n, n))
     T_yxs = np.zeros((n, n))
+    epsilon = np.zeros((n,n))
+
 
     for i in range(n):
         for j in range(n):
@@ -150,6 +152,7 @@ def compute_functional_network(sol, rr, **kwargs):
 
             # compute the network
             net = InterSystemRecurrenceNetwork(x, y, recurrence_rate=rr)
+            # epsilon[i,j] = net.threshold()
 
             # get the interesting metrics
             # - cross-clustering coefficient C_xy and C_yx
@@ -219,7 +222,7 @@ def compute_functional_network(sol, rr, **kwargs):
     common_edges = common_elements(edges, edges_)
     common_G = nx.DiGraph(common_edges)
 
-    return G, G_, common_G, T_diff, C_diff
+    return G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs
 
 
 def network_computation(data_directory_main, result_directory_main, **kwargs):
