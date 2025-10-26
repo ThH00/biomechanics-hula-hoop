@@ -14,7 +14,7 @@ import numpy as np
 from pathlib import Path
 from process_movella import load_movella, get_position
 from utilities_hula_hoop import get_steady_hooping_interval, get_fixed_frame_acceleration
-import pickle
+import json
 
 
 if __name__ == "__main__":
@@ -76,6 +76,12 @@ if __name__ == "__main__":
         for i,q in enumerate(quantities_pos):
             data_dict[s][q] = position_data[i]
 
-    with open(f"data_{IN_DIR.name}_{sensor_file_number}.pkl", "wb") as f:
-        pickle.dump(data_dict, f)
+    # Make all arrays into lists, to fix numpy compatibility between environments
+    for s,q in data_dict.items():
+        for k,v in q.items():
+            data_dict[s][k] = v.tolist()
+
+    # Save as JSON
+    with open(f"data_{IN_DIR.name}_{sensor_file_number}.json", "w") as f:
+        json.dump(data_dict, f)
 
