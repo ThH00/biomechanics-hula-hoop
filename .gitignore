@@ -9,3 +9,4 @@ __pycache__
 *.csv
 .vscode/
 experiments/objects_3d/extra/
+experiments/uploads/
