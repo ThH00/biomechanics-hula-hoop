@@ -8,3 +8,4 @@ outputs
 __pycache__
 *.csv
 .vscode/
+experiments/objects_3d/extra/
