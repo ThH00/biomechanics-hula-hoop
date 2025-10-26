@@ -10,3 +10,4 @@ __pycache__
 .vscode/
 experiments/objects_3d/extra/
 experiments/uploads/
+experiments/experiment_save_data_examples.txt
