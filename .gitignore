@@ -11,3 +11,4 @@ __pycache__
 experiments/objects_3d/extra/
 experiments/uploads/
 experiments/experiment_save_data_examples.txt
+*.stl
