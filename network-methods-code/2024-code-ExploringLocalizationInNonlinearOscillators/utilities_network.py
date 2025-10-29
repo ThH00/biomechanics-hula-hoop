@@ -105,10 +105,12 @@ def animate_networks(data, mapping, target_nodes,
                      animation_filename = 'network_evolution.gif',
                      window_size=100):
     # --- ANIMATION PARAMETERS ---
-    TOTAL_TIME_POINTS = np.shape(data)[0]
+    TOTAL_TIME_POINTS = data.shape[0]
     WINDOW_SIZE = window_size    # Number of time points in the sliding window
     STEP_SIZE = 5                # How much the window shifts per frame (fewer steps = faster animation)
     FPS = 10                     # Frames per second for the final GIF
+
+    n_nodes = data.shape[1]
 
     # Calculate the start indices for each frame
     start_indices = np.arange(0, TOTAL_TIME_POINTS - WINDOW_SIZE, STEP_SIZE)
@@ -123,7 +125,7 @@ def animate_networks(data, mapping, target_nodes,
 
     # Pre-calculate the fixed circular layout (should not change over time)
     # We use a dummy graph just to get the node ordering for the layout.
-    dummy_G = nx.DiGraph(np.zeros((12, 12)))
+    dummy_G = nx.DiGraph(np.zeros((n_nodes, n_nodes)))
     dummy_LG = nx.relabel_nodes(dummy_G, mapping)
     fixed_pos = nx.circular_layout(dummy_LG)
 
