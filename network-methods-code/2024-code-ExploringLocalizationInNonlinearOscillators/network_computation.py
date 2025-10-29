@@ -152,7 +152,7 @@ def compute_functional_network(sol, rr, **kwargs):
 
             # compute the network
             net = InterSystemRecurrenceNetwork(x, y, recurrence_rate=rr)
-            epsilon[i,j] = net.threshold()
+            epsilon[i,j] = net.threshold
 
             # get the interesting metrics
             # - cross-clustering coefficient C_xy and C_yx
