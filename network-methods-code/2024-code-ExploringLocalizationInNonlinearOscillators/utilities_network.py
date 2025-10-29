@@ -102,12 +102,13 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
 
 def animate_networks(data, mapping, target_nodes,
                      width_scale = 5.0,
-                     animation_filename = 'network_evolution.gif'):
+                     animation_filename = 'network_evolution.gif',
+                     window_size=100):
     # --- ANIMATION PARAMETERS ---
     TOTAL_TIME_POINTS = np.shape(data)[0]
-    WINDOW_SIZE = 100    # Number of time points in the sliding window
-    STEP_SIZE = 5        # How much the window shifts per frame (fewer steps = faster animation)
-    FPS = 10             # Frames per second for the final GIF
+    WINDOW_SIZE = window_size    # Number of time points in the sliding window
+    STEP_SIZE = 5                # How much the window shifts per frame (fewer steps = faster animation)
+    FPS = 10                     # Frames per second for the final GIF
 
     # Calculate the start indices for each frame
     start_indices = np.arange(0, TOTAL_TIME_POINTS - WINDOW_SIZE, STEP_SIZE)
