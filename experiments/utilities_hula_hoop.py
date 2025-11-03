@@ -117,6 +117,17 @@ def get_fixed_frame_acceleration(ax, ay, az,
 
     return Ax, Ay, Az
 
+def get_euler_derivatives(phi,theta,psi,
+                          wx,wy,wz):
+    transformation = np.array([
+        [np.zeros_like(phi), np.sin(phi)/np.cos(theta), np.cos(phi)/np.cos(theta)],
+        [np.zeros_like(phi), np.cos(phi),               -np.sin(phi)],
+        [np.ones_like(phi),  np.sin(phi)*np.tan(theta), np.cos(phi)*np.tan(theta)]
+        ]).transpose(2,0,1)
+    corotational_angular_velocities = np.array([[wx],[wy],[wz]]).transpose(2,0,1)
+    psidot, thetadot, phidot = (transformation @ corotational_angular_velocities).transpose(1,2,0)
+    return phidot.flatten(), thetadot.flatten(), psidot.flatten()
+
 def offset_hoop_sensor(phi0,theta0,psi0,
                   dx0,dy0,dz0,
                   angle_along_hoop=141.5,

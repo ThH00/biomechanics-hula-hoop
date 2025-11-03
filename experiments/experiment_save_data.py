@@ -13,7 +13,7 @@ import sys
 import numpy as np
 from pathlib import Path
 from process_movella import load_movella, get_position
-from utilities_hula_hoop import get_steady_hooping_interval, get_fixed_frame_acceleration
+from utilities_hula_hoop import get_steady_hooping_interval, get_fixed_frame_acceleration, get_euler_derivatives
 import json
 
 
@@ -63,6 +63,12 @@ if __name__ == "__main__":
         for q in raw_quantities:
             data_dict[s][q] = data_dict[s][q][active_slice]
 
+    # Get Euler Angle derivatives
+    for s in sensor_ids:
+        data_dict[s]['phidot'],data_dict[s]['thetadot'],data_dict[s]['psidot'] = get_euler_derivatives(
+            data_dict[s]['phi'],data_dict[s]['phi'],data_dict[s]['phi'],
+            data_dict[s]['wx'], data_dict[s]['wy'], data_dict[s]['wz'],
+            )
 
     # Get displacements and velocities
     quantities_local = ['ax','ay','az','psi','theta','phi']
