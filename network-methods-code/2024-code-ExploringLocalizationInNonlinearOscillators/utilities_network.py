@@ -6,6 +6,75 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from contextlib import redirect_stdout
 import io
 
+def data_dict_to_2d_array(data_dict,
+                          sensors=['OL','OR','IT','IL','IB'],
+                          quantities=['wx','wy','wz'],
+                          ntime=None):
+    """
+    Make a 2d array of nodal time series data for network analysis using `compute_functional_network`.
+    Each node has one single-component quantity.
+
+    Returns an array with shape = (ntime, nsensors x nquantities)
+    order:
+        sensor1 quantity1
+        sensor1 quantity2
+        sensor1 quantity3
+        sensor2 quantity1
+        ...
+    """
+    if ntime is not None:
+        return np.array([data_dict[s][q]for s in sensors for q in quantities]).T[:ntime]
+    else:
+        return np.array([data_dict[s][q]for s in sensors for q in quantities]).T
+    
+def data_dict_to_3d_array(data_dict,
+                          sensors=['OL','OR','IT','IL','IB'],
+                          quantities=[['dx','vx'],['dy','vy'],['dz','vz']],
+                          ntime=None):
+    """
+    Make a 3d array of nodal time series data for network analysis using `compute_functional_network`.
+    Each node has multiple components.
+    
+    Returns an array with shape = (ntime, nsensors x nquantities, ncomponents per quantity)
+    """ 
+    data_array = [[data_dict[s][q] for q in qset] for s in sensors for qset in quantities]
+    if ntime is not None:
+        return np.array(data_array).transpose(2,0,1)[:ntime]
+    else:
+        return np.array(data_array).transpose(2,0,1)
+
+def scale_data_array(data_array, scale_overall=True):
+    if data_array.ndim == 2:
+        if scale_overall:
+            component_means = data_array.mean(axis=(0,1))
+            component_stds = data_array.std(axis=(0,1))
+            return (data_array - component_means) / component_stds
+        else:
+            ntime, nquantities = data_array.shape
+            scaled_data_array = np.empty_like(data_array)
+            for q in range(nquantities):
+                component = data_array[:,q]
+                component_mean = component.mean()
+                component_std = component.std()
+                scaled_data_array[:,q] = (data_array[:,q] - component_mean) / component_std
+            return scaled_data_array
+
+    if data_array.ndim == 3:
+        if scale_overall:
+            component_means = data_array.mean(axis=(0,1))
+            component_stds = data_array.std(axis=(0,1))
+            return (data_array - component_means) / component_stds
+        else:
+            ntime, nquantities, ncomponents = data_array.shape
+            scaled_data_array = np.empty_like(data_array)
+            for q in range(nquantities):
+                for c in range(ncomponents):
+                    component = data_array[:,q,c]
+                    component_mean = component.mean()
+                    component_std = component.std()
+                    scaled_data_array[:,q,c] = (data_array[:,q,c] - component_mean) / component_std
+            return scaled_data_array
+
 def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False):
     if not self_loops:
         np.fill_diagonal(C_xys, 0)
@@ -50,11 +119,11 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
     nx.draw_networkx_nodes(
         LG, 
         pos, 
-        node_size=700, 
+        node_size=800, 
         node_color='lightgreen', 
         edgecolors='black'
     )
-    nx.draw_networkx_labels(LG, pos, font_size=10, font_color='black')
+    nx.draw_networkx_labels(LG, pos, font_size=12, font_color='black')
 
 
     # 3b. Draw the SPECIAL Edges (Red/Orange color)
@@ -100,10 +169,13 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
     return plt.gcf()
 
 
-def animate_networks(data, mapping, target_nodes,
+def animate_networks(data, 
+                     rr, C_threshold, T_threshold, n,
+                     mapping, target_nodes,
                      width_scale = 5.0,
                      animation_filename = 'network_evolution.gif',
-                     window_size=100):
+                     window_size=100,
+                     self_loops=False):
     # --- ANIMATION PARAMETERS ---
     TOTAL_TIME_POINTS = data.shape[0]
     WINDOW_SIZE = window_size    # Number of time points in the sliding window
@@ -214,13 +286,12 @@ def animate_networks(data, mapping, target_nodes,
         # The output is (C_xys, C_yxs, T_xys, T_yxs) as per your setup
         with redirect_stdout(io.StringIO()): # suppress print statements
             G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
-                data_window, 
-                (0.06, 0.06, 0.02), 
-                C_threshold=0.02, 
-                T_threshold=0.02, 
-                n=np.shape(data)[1]
+                data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
             )
         
+        if not self_loops:
+            np.fill_diagonal(C_xys, 0)
+
         networks_data = [C_xys, C_yxs, T_xys, T_yxs]
 
         # 3. Redraw all four subplots
