@@ -20,6 +20,27 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import warnings
 
+SYMDICT = {
+    'wx': r"$\omega_{x}$",
+    'wy': r"$\omega_{y}$",
+    'wz': r"$\omega_{z}$",
+    'dx': r"$d_{x}$",
+    'dy': r"$d_{y}$",
+    'dz': r"$d_{z}$",
+    'vx': r"$v_{x}$",
+    'vy': r"$v_{y}$",
+    'vz': r"$v_{z}$",
+    'ax': r"$a_{x}$",
+    'ay': r"$a_{y}$",
+    'az': r"$a_{z}$",
+    'Ax': r"$A_{x}$",
+    'Ay': r"$A_{y}$",
+    'Az': r"$A_{z}$",
+    'phi': r"$\phi$",
+    'theta': r"$\theta$",
+    'psi': r"$\psi$"
+}
+
 def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
     """
     The angle psi seems to be close to linear during steady hula hooping.
@@ -288,21 +309,33 @@ def plot_PCA_FFT(X_pca,dt,subtitle,n_modes,xlim,colors=None):
     fig.suptitle(f"FFT, {subtitle}")
 
 
-def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_slice=None):
+def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_slice=None,one_per=False):
     sensors_to_plot = sensor_labels.keys()
-    sensor_titles = list(sensor_labels.values())
     quantities = list(data_dict.values())[0].keys()
+    if one_per:
+        sensor_titles = [f"{SYMDICT[q]}" for q in quantities]
+        
+    else:
+        sensor_titles = list(sensor_labels.values())
     
     colors = [
-        'rgba(0, 0, 255, 0.7)',    # Blue
         'rgba(255, 0, 0, 0.7)',    # Red
-        'rgba(0, 128, 0, 0.7)'     # Green
+        'rgba(0, 128, 0, 0.7)',    # Green
+        'rgba(0, 0, 255, 0.7)',    # Blue
     ]
 
     # Keep track of which legend items have been shown
     legend_shown = [False, False, False]
     
-    fig = make_subplots(rows=5, cols=1, subplot_titles=sensor_titles, shared_xaxes=True, x_title="Time (s)")
+    if one_per:
+        ncols = len(quantities)
+    else:
+        ncols = 1
+
+    fig = make_subplots(rows=len(sensors_to_plot), cols=ncols, subplot_titles=sensor_titles,
+                        shared_xaxes=True, x_title="Time (s)",
+                        shared_yaxes=True,
+                        vertical_spacing=0.08)
     if active_slice is None:
         active_slice = slice(0,-1)
     # Loop through each sensor and subplot
@@ -313,11 +346,12 @@ def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_
                 y=data_dict[sensor][q][active_slice], 
                 mode='lines', 
                 # name=f'{q.capitalize()}',
-                name=q,
+                # name=q,
+                name = SYMDICT[q],
                 # legendgroup=j,
                 line=dict(color=colors[j]),
-                showlegend=not legend_shown[j]
-            ), row=i, col=1)
+                showlegend=not one_per and not legend_shown[j]
+            ), row=i, col=j+1 if one_per else 1)
             # Mark this legend item as shown after the first trace
             legend_shown[j] = True
 
@@ -327,10 +361,22 @@ def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_
 
     # Decrease margins and add a title
     fig.update_layout(
-        height=800,width=800,
+        height=150*len(sensors_to_plot),
+        width=800,
         title_text=title,
-        margin=dict(l=40, r=20, t=80, b=60),
+        margin=dict(l=80, r=20, t=80, b=60),
     )
+    fig.update_annotations(font_size=18)
+    
+    for annotation in fig.layout.annotations:
+        if annotation.text in SYMDICT.values():
+            annotation.update(
+                y=1.05, font_size=22)
+
+    if one_per:
+        # Add y axes labels
+        for i, sensor in enumerate(sensors_to_plot, start=1):
+            fig.update_yaxes(title_text=f"{sensor_labels[sensor]}<br>(rad/s)", row=i, col=1)
 
     return fig
 

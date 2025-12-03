@@ -11,3 +11,4 @@ ipywidgets
 nbformat
 scienceplots
 numpy-stl
+kaleido
