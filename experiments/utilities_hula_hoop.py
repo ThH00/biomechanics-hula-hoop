@@ -282,9 +282,9 @@ def plot_PCA_FFT(X_pca,dt,subtitle,n_modes,xlim,colors=None):
     for i in range(n_modes):
         freq,amp = fourier_spectrum(X_pca[:,i],step=dt)
         if colors is not None:
-            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=0.4,xlim=xlim,color=colors[i])
+            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=1,xlim=xlim,color=colors[i])
         else:
-            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=0.4,xlim=xlim)
+            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=1,xlim=xlim)
     fig.suptitle(f"FFT, {subtitle}")
 
 
@@ -467,13 +467,16 @@ def plot_PCA_modes(eigenvectors,sensors_to_include,quantities_to_include,sensor_
 
     for i in range(n_rows): # Each row is a mode with n_senors sensors
         for j in range(n_cols): # Each column is a sensor with n_quantities quantities
-            ax[i,j].stem(x_vals, eigenvectors[i, n_quantities*j:n_quantities*(j+1)])
+            ax[i,j].plot(eigenvectors[i, n_quantities*j:n_quantities*(j+1)], '.', markersize=12)
+            # ax[i,j].stem(x_vals, eigenvectors[i, n_quantities*j:n_quantities*(j+1)])
             ax[i,j].axhline(0, color='gray', linestyle='--', linewidth=0.8)
             ax[i,j].set_xticks(x_vals)
             ax[i,j].set_xticklabels(quantities_to_include,rotation=45)
             ax[-1,j].set_xlabel(sensor_labels[sensors_to_include[j]])
             ax[i,j].set_ylim(-1, 1)
         ax[i,0].set_ylabel(rf"$\xi_{{{i+1}}}$")
+
+        plt.savefig('PCA_modes.eps', format='eps')
 
 def plot_PCA_modes_3D():
     return
