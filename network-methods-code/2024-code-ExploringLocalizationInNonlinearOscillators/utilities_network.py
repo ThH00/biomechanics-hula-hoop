@@ -175,27 +175,93 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
     return plt.gcf()
 
 
-def animate_networks(data, 
-                     rr, C_threshold, T_threshold, n,
+def get_time_networks(data,
+                      rr, C_threshold, T_threshold,
+                      window_size=100,
+                      step_size=5,
+                    ):
+    n_time = data.shape[0]
+    n_nodes = data.shape[1]
+    start_indices = np.arange(0, n_time - window_size, step_size)
+    n_frames = len(start_indices)
+
+    def get_data_window(frame_index,start_indices,window_size):
+        """Slice the data for the current window"""
+        t_start = start_indices[frame_index]
+        t_end = t_start + window_size
+        data_window = data[t_start:t_end, :]
+        return data_window
+
+    def get_network_window(data_window,rr,C_threshold,T_threshold,n=n_nodes):
+        """Get the networks data for the current window"""
+        # Calculate the four networks
+        with redirect_stdout(io.StringIO()): # suppress print statements
+            G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
+                data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
+            )
+        networks_data = [C_xys, C_yxs, T_xys, T_yxs]
+        return networks_data
+
+    network_windows_array = np.empty((n_frames,4,n_nodes,n_nodes))
+    for frame_index in range(n_frames):
+        data_window = get_data_window(frame_index,start_indices,window_size)
+        network_windows_array[frame_index] = get_network_window(data_window,rr,C_threshold,T_threshold)
+
+    return network_windows_array
+
+
+def plot_time_networks(network_windows_array,
+                       mapping, target_nodes,
+                       width_scale,
+                       plot_filename_prefix = 'network_time',
+                       return_figs = False):
+
+    n_frames,_,n_nodes,_ = network_windows_array.shape
+
+    if return_figs:
+        figs_to = {}
+        figs_from = {}
+
+    for target_node in target_nodes:
+        to_edges = np.empty()
+        from_edges = np.empty()
+
+        for frame_index in range(n_frames):
+            network_data = network_windows_array[frame_index]
+            for i in range(n_nodes):
+                to_edges[i] = [target_node]
+
+        fig_to,ax_to = plt.subplots(nrows=3,ncols=2,
+                            width_ratios=[1,2],
+                            )
+        fig_from,ax_from = plt.subplots(nrows=3,ncols=2,
+                            width_ratios=[1,2],
+                            )
+        
+        fig_to.savefig(fname=str(plot_filename_prefix)+f"_to_{target_node}.svg")
+        
+        if return_figs:
+            figs_to[target_node] = fig_to
+            figs_from[target_node] = fig_from
+
+    if return_figs:
+        return figs_to, figs_from
+
+
+def animate_networks(network_windows_array,
                      mapping, target_nodes,
+                     n_time,
+                     window_size,
+                     step_size,
                      width_scale = 5.0,
                      animation_filename = 'network_evolution.gif',
-                     window_size=100,
                      self_loops=False):
-    # --- ANIMATION PARAMETERS ---
-    TOTAL_TIME_POINTS = data.shape[0]
-    WINDOW_SIZE = window_size    # Number of time points in the sliding window
-    STEP_SIZE = 5                # How much the window shifts per frame (fewer steps = faster animation)
-    FPS = 10                     # Frames per second for the final GIF
 
-    n_nodes = data.shape[1]
+    FPS = 10 # Frames per second for the final GIF
+    network_titles = ['C_xys Network', 'C_yxs Network', 'T_xys Network', 'T_yxs Network'] # Plot titles
 
-    # Calculate the start indices for each frame
-    start_indices = np.arange(0, TOTAL_TIME_POINTS - WINDOW_SIZE, STEP_SIZE)
-    NUM_FRAMES = len(start_indices)
-
-    # --- GLOBAL PLOTTING CONFIGURATION (from your code) ---
-    network_titles = ['C_xys Network', 'C_yxs Network', 'T_xys Network', 'T_yxs Network']
+    n_frames,_,n_nodes,_ = network_windows_array.shape
+    start_indices = np.arange(0, n_time - window_size, step_size)
 
     # Prepare the figure and axes once
     fig, axes = plt.subplots(2, 2, figsize=(15, 15))
@@ -207,7 +273,7 @@ def animate_networks(data,
     dummy_LG = nx.relabel_nodes(dummy_G, mapping)
     fixed_pos = nx.circular_layout(dummy_LG)
 
-    # Define a single function to draw a network on a specific axis
+    # --- 1. Define a single function to draw a network on a specific axis ---
     def draw_single_network(ax, network_data, title, pos, t_start):
         """Draws a single network plot on the given axis."""
         
@@ -274,7 +340,7 @@ def animate_networks(data,
         )
 
         # Set Title and time annotation
-        ax.set_title(f"{title}\nTime Window: {t_start}-{t_start + WINDOW_SIZE}", fontsize=12)
+        ax.set_title(f"{title}\nTime Window: {t_start}-{t_start + window_size}", fontsize=12)
 
     # --- 2. The Update Function for the Animation ---
     def update(frame_index):
@@ -282,25 +348,15 @@ def animate_networks(data,
         Function called by FuncAnimation for each frame.
         It calculates the networks for a new time window and updates the plots.
         """
-        t_start = start_indices[frame_index]
-        t_end = t_start + WINDOW_SIZE
-        
-        # 1. Slice the data for the current window
-        data_window = data[t_start:t_end, :]
-
-        # 2. Calculate the four networks
-        # The output is (C_xys, C_yxs, T_xys, T_yxs) as per your setup
-        with redirect_stdout(io.StringIO()): # suppress print statements
-            G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
-                data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
-            )
+        # Retreive the four networks, [C_xys, C_yxs, T_xys, T_yxs]
+        networks_data = network_windows_array[frame_index]
         
         if not self_loops:
-            np.fill_diagonal(C_xys, 0)
+            for X_xys in networks_data:
+                np.fill_diagonal(X_xys, 0)
 
-        networks_data = [C_xys, C_yxs, T_xys, T_yxs]
-
-        # 3. Redraw all four subplots
+        # Redraw all four subplots
+        t_start = start_indices[frame_index]
         for i in range(4):
             ax = axes_flat[i]
             network_data = networks_data[i]
@@ -312,12 +368,12 @@ def animate_networks(data,
         return axes_flat
 
     # --- 3. Run and Save the Animation ---
-    print(f"Generating animation with {NUM_FRAMES} frames...")
+    print(f"Generating animation with {n_frames} frames...")
 
     anim = FuncAnimation(
         fig, 
         update, 
-        frames=NUM_FRAMES,
+        frames=n_frames,
         blit=False,  # Set to False, as NetworkX often doesn't handle blitting well
         interval=1000/FPS # Delay between frames in ms
     )
