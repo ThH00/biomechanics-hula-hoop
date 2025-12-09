@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np
 from matplotlib import pyplot as plt
 import networkx as nx
@@ -5,6 +7,10 @@ from network_computation import compute_functional_network
 from matplotlib.animation import FuncAnimation, PillowWriter
 from contextlib import redirect_stdout
 import io
+from pyunicorn.timeseries.inter_system_recurrence_network import InterSystemRecurrenceNetwork
+
+source_code_package = inspect.getsource(InterSystemRecurrenceNetwork)
+print(source_code_package[:200]) # Print first 200 characters
 
 def data_dict_to_2d_array(data_dict,
                           sensors=['OL','OR','IT','IL','IB'],
@@ -322,3 +328,131 @@ def animate_networks(data,
 
     plt.close(fig) # Close the figure to free up memory
     print(f"Animation saved as {animation_filename}")
+
+
+
+def compute_functional_network(sol, rr, **kwargs):
+    """
+    For a given time series sol, compute the inter-system-recurrence-network
+    based on cross-clustering and cross-transitivity.
+    - Iterative process: for each combi of two dofs:
+        - generate isrn
+        - compute cross-clustering coefficients, cross-transitivities and store in matrices C_xys, C_yxs and T_xys, T_yxs
+    - generate two matrices C_diff = C_xys - C_yxs, T_diff = T_xys - T_yxs
+    - create edge lists based on C_diff, T_diff and thresholds
+    - generate common graph edges list by comparing C- and T- based graphs
+
+    :param sol: time series data in [n_timesteps, 2*n], where n number of oscillators and sol has both displacements and velocities
+    :param rr: recurrence rate to use for the computations. in rr = (rr_x, rr_y, rr_xy). suggested values: (0.3,0.3,0.2)
+    :param kwargs: C_threshold and T_threshold. define a threshold below which entries in C_diff and T_diff will be considered as bi-directional edges
+    :param kwargs: n: number of variables from the time series to use, if not the first half of variables in the
+    time series
+    :return: G based on C_diff, G_ based on T_diff and common_G which only contains common edges
+    """
+    #
+
+    velocities_only = kwargs.get('velocities_only', False)
+
+    # get number of variables from each time series to use
+    # default = use first half, i.e. the positional ones
+    n = kwargs.get('n', int(np.shape(sol)[1] / 2))
+
+    # threshold for adding axes
+    C_threshold = kwargs.get('C_threshold', 0)
+    T_threshold = kwargs.get('T_threshold', 0)
+
+    # verbosity: if True, values of T_diff and C_diff and according edge will be printed
+    verbose = kwargs.get('verbose', False)
+
+    # iterate over each pairwise combi of variables, compute cross-rp, isrn and C,T measures
+    # initialize arrays
+    C_xys = np.zeros((n, n))
+    C_yxs = np.zeros((n, n))
+    T_xys = np.zeros((n, n))
+    T_yxs = np.zeros((n, n))
+    epsilon = np.zeros((n,n))
+
+
+    for i in range(n):
+        for j in range(n):
+            # choose time series
+            if velocities_only:
+                x = sol[:, i+n]
+                y = sol[:, j+n]
+            else:
+                x = sol[:, i]
+                y = sol[:, j]
+
+            # compute the network
+            net = InterSystemRecurrenceNetwork(x, y, recurrence_rate=rr)
+            epsilon[i,j] = net.threshold
+
+            # get the interesting metrics
+            # - cross-clustering coefficient C_xy and C_yx
+            # - cross-transitivity T_xy and T_yx
+            C_xys[i, j] = net.cross_global_clustering_xy()
+            C_yxs[i, j] = net.cross_global_clustering_yx()
+            T_xys[i, j] = net.cross_transitivity_xy()
+            T_yxs[i, j] = net.cross_transitivity_yx()
+
+    # compute measure differences to create graphs
+    C_diff = C_xys - C_yxs
+    T_diff = T_xys - T_yxs
+
+    np.savez('network_arrays.npz', C_xys=C_xys, C_yxs=C_yxs, T_xys=T_xys, T_yxs=T_yxs, C_diff=C_diff, T_diff=T_diff, epsilon=epsilon)
+
+    # create an array of edges according to information in C_xy and C_yx
+    edges = []
+
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            else:
+                if C_diff[i, j] > C_threshold:
+                    edges.append([j, i])
+                elif C_diff[i, j] < -C_threshold:
+                    edges.append([i, j])
+
+                # optional: add bi-directional coupling when C_xy = C_yx
+                else:
+                    edges.append([i, j])
+                    edges.append([j, i])
+
+            # print for debugging
+            if verbose:
+                print(f'combi: {i} and {j}, C_diff = {C_diff[i, j]:.4f}, entry: {edges} ')
+
+    # generate graph
+    G = nx.DiGraph(edges)
+
+    # create an array of edges according to information in T_xy and T_yx
+    edges_ = []
+
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                continue
+            else:
+                if T_diff[i, j] > T_threshold:
+                    edges_.append([j, i])
+                elif T_diff[i, j] < -T_threshold:
+                    edges_.append([i, j])
+
+                # # optional: add bi-directional coupling when C_xy = C_yx
+                # else:
+                #     edges_.append([i, j])
+                #     edges_.append([j, i])
+
+            # print for debugging
+            if verbose:
+                print(f'combi: {i} and {j}, Tdiff = {T_diff[i, j]:.4f}, entry: {edges_} ')
+
+    # generate graph
+    G_ = nx.DiGraph(edges_)
+
+    # generate graph from common edges, i.e. edges that are indicated by both T and C
+    common_edges = common_elements(edges, edges_)
+    common_G = nx.DiGraph(common_edges)
+
+    return G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs
