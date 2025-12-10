@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.animation import FuncAnimation, FFMpegWriter
+from matplotlib.patches import Ellipse
 
 def get_Ax(x,epsilon_x):
     '''
@@ -18,6 +19,22 @@ def get_Ax(x,epsilon_x):
     rr = (np.sum(Ax)+np.shape(Ax)[0])/np.size(Ax)
     return Ax, rr
 
+def get_Ax2(t,x,epsilon_x):
+    '''
+    Get recurrence network adjacency matrix (one time series)
+        x: timeseries
+        t: time array
+        epsilon_x: distance threshold
+    '''
+    Nx = np.size(x)
+    Ax = np.zeros((Nx,Nx))
+    for i in range(Nx):
+        for j in range(Nx):
+            Ax[i,j] = np.heaviside(epsilon_x-np.linalg.norm([t[i]-t[j],x[i]-x[j]]),0)
+    Ax = Ax-np.eye(Nx)
+    rr = (np.sum(Ax)+np.shape(Ax)[0])/np.size(Ax)
+    return Ax, rr
+
 
 def plot_Ax(t, x, Ax, color, label, ax=None):
     """
@@ -27,7 +44,7 @@ def plot_Ax(t, x, Ax, color, label, ax=None):
         ax = plt.gca()
 
     # Plot the time series
-    ax.plot(t, x, '-o', color=color, label=label, alpha=0.7)
+    ax.plot(t, x, '-o', color=color, label=label, alpha=0.7, linewidth=1)
     
     # Convert adjacency matrix to graph
     G = nx.from_numpy_array(Ax)
@@ -36,7 +53,18 @@ def plot_Ax(t, x, Ax, color, label, ax=None):
     # We use a simplified loop here. For very large datasets, LineCollection is faster.
     for i, j in G.edges():
         # Draw a curved or straight line between recurring points
-        ax.plot([t[i], t[j]], [x[i], x[j]], '-', color=color, alpha=0.3, linewidth=1)
+        ax.plot([t[i], t[j]], [x[i], x[j]], '-', color=color, alpha=0.6, linewidth=1)
+
+        ellipse = Ellipse(xy=((t[i]+t[j])/2,(x[i]+x[j])/2),       # center (x0, y0)
+                    width=0.5,          # major axis length
+                    height=0.5,         # minor axis length
+                    angle=0,            # rotation in degrees
+                    edgecolor=color,
+                    facecolor='none',
+                    alpha=0.4,
+                    linewidth=0.5)
+
+        ax.add_patch(ellipse)
     
     ax.set_ylabel(f"{label}(t)")
     ax.legend(loc='upper right')
@@ -60,6 +88,25 @@ def get_Axy(x,y,epsilon_x,epsilon_y,epsilon_xy):
     RRxy = np.sum(CRxy)/(Nx*Ny)
     print(f'RRxy = {RRxy}')
     return Axy, RRxy
+
+def get_Axy2(t,x,y,epsilon_x,epsilon_y,epsilon_xy):
+    Nx = np.size(x)
+    Ny = np.size(y)
+    CRxy = np.zeros((Nx,Ny))
+    #
+    Ax, RRx = get_Ax2(t,x,epsilon_x)
+    # print(f'RRx = {RRx}')
+    Ay, RRy = get_Ax2(t,y,epsilon_y)
+    # print(f'RRy = {RRy}')
+    for i in range(Nx):
+        for j in range(Ny):
+            CRxy[i,j] = np.heaviside(epsilon_xy-np.linalg.norm([x[i]-y[j],t[i]-t[j]]),0)
+    Axy = np.block([[Ax, CRxy],
+                   [CRxy.T, Ay]])
+    RRxy = np.sum(CRxy)/(Nx*Ny)
+    # print(f'RRxy = {RRxy}')
+
+    return Axy, RRx, RRy, RRxy
 
 
 def plot_Axy(t, x, y, Axy):
@@ -98,6 +145,17 @@ def plot_Axy(t, x, y, Axy):
     for i, j in G_cross.edges():
         # i is index in x, j is index in y
         ax3.plot([t[i], t[j]], [x[i], y[j]], 'r-', alpha=0.5, linewidth=1)
+    
+        ellipse = Ellipse(xy=((t[i]+t[j])/2,(x[i]+y[j])/2),       # center (x0, y0)
+                    width=0.3,         # major axis length
+                    height=0.3,        # minor axis length
+                    angle=0,        # rotation in degrees
+                    edgecolor='red',
+                    facecolor='none',
+                    alpha=0.5,
+                    linewidth=1)
+
+        ax3.add_patch(ellipse)
         
     ax3.set_ylabel("Amplitude")
     ax3.set_xlabel("Time")
