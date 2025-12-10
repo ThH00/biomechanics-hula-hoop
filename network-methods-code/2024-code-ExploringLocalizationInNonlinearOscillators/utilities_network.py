@@ -12,6 +12,58 @@ from pyunicorn.timeseries.inter_system_recurrence_network import InterSystemRecu
 source_code_package = inspect.getsource(InterSystemRecurrenceNetwork)
 print(source_code_package[:200]) # Print first 200 characters
 
+from pathlib import Path
+import os
+
+SYMDICT = {
+    'wx': r"$\omega_{x}$",
+    'wy': r"$\omega_{y}$",
+    'wz': r"$\omega_{z}$",
+    'dx': r"$d_{x}$",
+    'dy': r"$d_{y}$",
+    'dz': r"$d_{z}$",
+    'vx': r"$v_{x}$",
+    'vy': r"$v_{y}$",
+    'vz': r"$v_{z}$",
+    'phi': r"$\phi$",
+    'theta': r"$\theta$",
+    'psi': r"$\psi$",
+    'phidot': r"$\dot{\phi}$",
+    'thetadot': r"$\dot{\theta}$",
+    'psidot': r"$\dot{\psi}$",
+}
+
+SENSOR_DICT = {
+    'OR': 'h',
+    'IB': 'f',
+    'IT': 't',
+    'IL': 'c'
+}
+
+SENSOR_DICT_LONG = {
+    'OR': 'hoop',
+    'IB': 'femur',
+    'IT': 'tibia',
+    'IL': 'cunei'
+}
+
+PLAIN_DICT = {
+        f"{n}{symbol}": f"{SENSOR_DICT_LONG[s]}_{name}"  # e.g. "femur_phi")
+        for s,n in SENSOR_DICT.items()
+        for name,symbol in SYMDICT.items()
+    }
+
+LONG_DICT = {
+        f"{n}{symbol}": f"{SENSOR_DICT_LONG[s]} {symbol}"  # e.g. "femur $\phi$")
+        for s,n in SENSOR_DICT.items()
+        for name,symbol in SYMDICT.items()
+    }
+
+NET_DICT = {
+    'C_xys': r"$C_{xy}$",
+    'T_xys': r"$T_{xy}$",
+}
+
 def data_dict_to_2d_array(data_dict,
                           sensors=['OL','OR','IT','IL','IB'],
                           quantities=['wx','wy','wz'],
@@ -213,39 +265,116 @@ def get_time_networks(data,
 def plot_time_networks(network_windows_array,
                        mapping, target_nodes,
                        width_scale,
+                       time,
+                       window_size=100,
+                       step_size=5,
                        plot_filename_prefix = 'network_time',
                        return_figs = False):
 
+    n_time = len(time)
     n_frames,_,n_nodes,_ = network_windows_array.shape
+    start_indices = np.arange(0, n_time - window_size, step_size)
+        
+    other_nodes = {s: name for s,name in mapping.items() if name not in target_nodes} # non-target nodes
+    target_nodes = {s: name for s,name in mapping.items() if name in target_nodes} # target nodes
+    arrow_dirs = ['to','from']
+    net_types = ['C_xys','T_xys']
+
+    # unique first letters of non-target node names
+    sensor_set = {node_name[0] for node_name in other_nodes.values()}
+    
+    other_nodes_by_sensor = {
+        sensor: {
+            s: node_name
+            for s,node_name in other_nodes.items()
+            if node_name[0]==sensor
+        }
+        for sensor in sensor_set
+    }
+    
+    if return_figs:
+        figs = {
+            arrow_dir: {
+                sensor: {
+                    net_type: None
+                    for net_type in net_types
+                }
+                for sensor in sensor_set
+            }
+            for arrow_dir in arrow_dirs
+        }
+
+    nets = {
+        arrow_dir: {
+            target_s: {
+                net_type: {
+                    other_s: np.empty(n_frames)
+                    for other_s in other_nodes.keys()
+                }
+                for net_type in net_types
+            }
+            for target_s in target_nodes.keys()
+        }
+        for arrow_dir in arrow_dirs
+    }
+
+    for target_s,target_name in target_nodes.items():
+        for frame_idx in range(n_frames):
+            C_xys,C_yxs,T_xys,T_yxs = network_windows_array[frame_idx]
+            assert np.allclose(C_xys,C_yxs.T)
+            assert np.allclose(T_xys,T_yxs.T)
+            net_at_frame = {
+                "C_xys": [width_scale*C_xys, width_scale*C_yxs],
+                "T_xys": [width_scale*T_xys, width_scale*T_yxs]
+            }
+            for dir_idx,arrow_dir in enumerate(arrow_dirs):
+                for net_type in net_types:
+                    for other_s in other_nodes.keys():
+                        # to: X_xys from non-target node to target node
+                        # from: X_yxs from non-target node to target node
+                        nets[arrow_dir][target_s][net_type][other_s][frame_idx] = net_at_frame[net_type][dir_idx][other_s][target_s]
+
+    reverse_sensor_dict = {v:k for k,v in SENSOR_DICT.items()}
+    for arrow_dir in arrow_dirs:
+        for sensor in sensor_set:
+            for net_type in net_types:
+
+                # TODO: add network animation in left column
+                # fig,ax = plt.subplots(nrows=3,ncols=2,
+                #                     width_ratios=[1,2],
+                #                     figsize=(10,8)
+                #                 )
+                fig,ax = plt.subplots(nrows=len(target_nodes),ncols=1,
+                                      figsize=(10,2.5*len(target_nodes)),
+                                      sharex=True,
+                                      constrained_layout=True)
+                for tn_idx,(target_s,target_name) in enumerate(target_nodes.items()):
+                    if len(target_nodes) > 1:
+                        tn_ax = ax[tn_idx]
+                    else:
+                        tn_ax = ax
+                    for other_s,node_name in other_nodes_by_sensor[sensor].items():
+                        tn_ax.plot([time[i] for i in start_indices],nets[arrow_dir][target_s][net_type][other_s], label=LONG_DICT[node_name])
+                    tn_ax.set_title(rf"{NET_DICT[net_type]}, {SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]} {arrow_dir} {LONG_DICT[target_name]}")
+                    tn_ax.set_xlabel("time (s)")
+                    tn_ax.legend()
+                
+                # e.g., network_time_plots/angular_velocities/to_hoop/
+                filedir = Path(str(plot_filename_prefix))/f"{arrow_dir}_hoop/"
+                if not filedir.exists():
+                    os.makedirs(filedir)
+                # e.g., femur_Cxys.png
+                filename = filedir/f"{SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]}_{net_type}.png"
+                print(f"Saving {filename}")
+                fig.savefig(fname=filename, dpi=400)
+                
+                if return_figs:
+                    figs[arrow_dir][sensor][net_type] = fig
+
+                plt.close()
 
     if return_figs:
-        figs_to = {}
-        figs_from = {}
-
-    for target_node in target_nodes:
-        to_edges = np.empty()
-        from_edges = np.empty()
-
-        for frame_index in range(n_frames):
-            network_data = network_windows_array[frame_index]
-            for i in range(n_nodes):
-                to_edges[i] = [target_node]
-
-        fig_to,ax_to = plt.subplots(nrows=3,ncols=2,
-                            width_ratios=[1,2],
-                            )
-        fig_from,ax_from = plt.subplots(nrows=3,ncols=2,
-                            width_ratios=[1,2],
-                            )
-        
-        fig_to.savefig(fname=str(plot_filename_prefix)+f"_to_{target_node}.svg")
-        
-        if return_figs:
-            figs_to[target_node] = fig_to
-            figs_from[target_node] = fig_from
-
-    if return_figs:
-        return figs_to, figs_from
+        return figs
 
 
 def animate_networks(network_windows_array,
