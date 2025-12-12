@@ -228,7 +228,11 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
 
 
 def get_time_networks(data,
-                      rr, C_threshold, T_threshold,
+                      use_thresholds=True,
+                      th=(0.1, 0.1, 0.05),
+                      rr=(0.06,0.06,0.02),
+                      C_threshold=0.02,
+                      T_threshold=0.02,
                       window_size=100,
                       step_size=5,
                     ):
@@ -248,10 +252,12 @@ def get_time_networks(data,
         """Get the networks data for the current window"""
         # Calculate the four networks
         with redirect_stdout(io.StringIO()): # suppress print statements
-            G, G_, common_G, C_xys, C_yxs, T_xys, T_yxs, rrx, rrxy = compute_functional_network_th(data_window,th=(0.1, 0.1, 0.05), n=n)
-            # G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
-            #     data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
-            # )
+            if use_thresholds:
+                G, G_, common_G, C_xys, C_yxs, T_xys, T_yxs, rrx, rrxy = compute_functional_network_th(data_window, th=th, n=n)
+            else:
+                G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
+                    data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
+                )
         networks_data = [C_xys, C_yxs, T_xys, T_yxs]
         return networks_data
 
@@ -340,11 +346,6 @@ def plot_time_networks(network_windows_array,
         for sensor in sensor_set:
             for net_type in net_types:
 
-                # TODO: add network animation in left column
-                # fig,ax = plt.subplots(nrows=3,ncols=2,
-                #                     width_ratios=[1,2],
-                #                     figsize=(10,8)
-                #                 )
                 fig,ax = plt.subplots(nrows=len(target_nodes),ncols=1,
                                       figsize=(10,2.5*len(target_nodes)),
                                       sharex=True,
