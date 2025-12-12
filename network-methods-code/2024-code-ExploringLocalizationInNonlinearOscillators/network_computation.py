@@ -98,6 +98,86 @@ import numpy as np
 from utils.utils import common_elements
 
 
+
+def compute_functional_network_th(sol, th, **kwargs):
+    """
+    For a given time series sol, compute the inter-system-recurrence-network
+    based on cross-clustering and cross-transitivity.
+    - Iterative process: for each combi of two dofs:
+        - generate isrn
+        - compute cross-clustering coefficients, cross-transitivities and store in matrices C_xys, C_yxs and T_xys, T_yxs
+
+    :param sol: time series data in [n_timesteps, 2*n], where n number of oscillators and sol has both displacements and velocities
+    :param th: distance threshold to use for the computations. in th = (epsilon_x, epsilon_y, epsilon_xy). values related to noise
+    :param kwargs: n: number of variables from the time series to use, if not the first half of variables in the
+    time series
+    :return: G based on C_diff, G_ based on T_diff and common_G which only contains common edges
+    """
+    #
+
+    velocities_only = kwargs.get('velocities_only', False)
+
+    # get number of variables from each time series to use
+    # default = use first half, i.e. the positional ones
+    n = kwargs.get('n', int(np.shape(sol)[1] / 2))
+
+    # verbosity: if True, values of T_diff and C_diff and according edge will be printed
+    verbose = kwargs.get('verbose', False)
+
+    # iterate over each pairwise combi of variables, compute cross-rp, isrn and C,T measures
+    # initialize arrays
+    C_xys = np.zeros((n, n))
+    C_yxs = np.zeros((n, n))
+    T_xys = np.zeros((n, n))
+    T_yxs = np.zeros((n, n))
+    rrx = np.zeros(n)
+    rry = np.zeros(n)
+    rrxy = np.zeros((n,n))
+
+    edges = []
+    edges_ = []
+
+    for i in range(n):
+        for j in range(n):
+            # choose time series
+            if velocities_only:
+                x = sol[:, i+n]
+                y = sol[:, j+n]
+            else:
+                x = sol[:, i]
+                y = sol[:, j]
+
+            # compute the network
+            net = InterSystemRecurrenceNetwork(x, y, threshold=th)
+
+            rrxy[i,j] = net.cross_recurrence_rate()
+            rrx[i], rry[i] = net.internal_recurrence_rates()
+
+            # get the interesting metrics
+            # - cross-clustering coefficient C_xy and C_yx
+            # - cross-transitivity T_xy and T_yx
+            C_xys[i, j] = net.cross_global_clustering_xy()
+            C_yxs[i, j] = net.cross_global_clustering_yx()
+            T_xys[i, j] = net.cross_transitivity_xy()
+            T_yxs[i, j] = net.cross_transitivity_yx()
+
+            edges.append([i, j])
+            edges_.append([i, j])
+
+    np.savez('network_arrays.npz', C_xys=C_xys, C_yxs=C_yxs, T_xys=T_xys, T_yxs=T_yxs, rrxy = rrxy, rrx=rrxy)
+
+    # generate graph
+    G = nx.DiGraph(edges)
+
+    # generate graph
+    G_ = nx.DiGraph(edges_)
+
+    # generate graph from common edges, i.e. edges that are indicated by both T and C
+    common_edges = common_elements(edges, edges_)
+    common_G = nx.DiGraph(common_edges)
+
+    return G, G_, common_G, C_xys, C_yxs, T_xys, T_yxs, rrx, rrxy
+
 def compute_functional_network(sol, rr, **kwargs):
     """
     For a given time series sol, compute the inter-system-recurrence-network
