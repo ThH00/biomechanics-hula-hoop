@@ -3,7 +3,7 @@ import inspect
 import numpy as np
 from matplotlib import pyplot as plt
 import networkx as nx
-from network_computation import compute_functional_network
+from network_computation import compute_functional_network, compute_functional_network_th
 from matplotlib.animation import FuncAnimation, PillowWriter
 from contextlib import redirect_stdout
 import io
@@ -248,9 +248,10 @@ def get_time_networks(data,
         """Get the networks data for the current window"""
         # Calculate the four networks
         with redirect_stdout(io.StringIO()): # suppress print statements
-            G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
-                data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
-            )
+            G, G_, common_G, C_xys, C_yxs, T_xys, T_yxs, rrx, rrxy = compute_functional_network_th(data_window,th=(0.1, 0.1, 0.05), n=n)
+            # G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
+            #     data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
+            # )
         networks_data = [C_xys, C_yxs, T_xys, T_yxs]
         return networks_data
 
