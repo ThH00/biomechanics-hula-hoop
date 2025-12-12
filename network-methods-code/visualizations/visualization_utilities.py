@@ -164,6 +164,10 @@ def plot_Axy(t, x, y, Axy):
     ax3.grid(True)
 
     plt.tight_layout()
+
+    # Save as EPS
+    fig.savefig("Axy_plot.eps", format="eps", dpi=300)
+    
     plt.show()
 
 
