@@ -64,6 +64,12 @@ NET_DICT = {
     'T_xys': r"$T_{xy}$",
 }
 
+MOTION_DICT = {
+    'wz': 'rotation',
+    'psi': 'rotation',
+    'dz': 'levitation',
+}
+
 def data_dict_to_2d_array(data_dict,
                           sensors=['OL','OR','IT','IL','IB'],
                           quantities=['wx','wy','wz'],
@@ -383,6 +389,7 @@ def plot_heatmaps(network_windows_array,
                 mapping, target_nodes,
                 heatmap_target_quantities,
                 width_scale,
+                heatmap_max,
                 time,
                 window_size=100,
                 step_size=5,
@@ -453,12 +460,24 @@ def plot_heatmaps(network_windows_array,
                         nets[arrow_dir][target_s][net_type][other_s][frame_idx] = net_at_frame[net_type][dir_idx][other_s][target_s]
 
     reverse_sensor_dict = {v:k for k,v in SENSOR_DICT.items()}
+    
+    start_times = [time[i] for i in start_indices]
+    time_start = np.ceil(start_times[0]*2)/2 # round first start time up to nearest 0.5
+    time_end = np.floor(start_times[-1]*2)/2 # round last start time down to nearest 0.5
+    time_idx_start = np.where(start_times<=time_start)[0][-1]
+    time_idx_end = np.where(start_times>=time_end)[0][0]
+    dt = start_times[1]-start_times[0]
+    n_frames_per_tick = int(1/dt)
+
+    time_tick_locs = np.arange(time_idx_start,time_idx_end,n_frames_per_tick)
+    time_tick_labels = [np.round(start_times[i],2) for i in time_tick_locs]
+
     for arrow_dir in arrow_dirs:
         for net_type in net_types:
             fig,ax = plt.subplots(nrows=len(sensor_set),ncols=1,
                                     figsize=(10,2.5*len(target_nodes)),
-                                    sharex=True,
-                                    constrained_layout=True)
+                                    sharex=True)
+            fig.subplots_adjust(right=0.82,left=0.05) # make room for the shared colorbar on the right
             for s_idx,sensor in enumerate(sensor_set):
                 for target_s,target_name in target_nodes.items():
                     if len(sensor_set) > 1:
@@ -468,22 +487,25 @@ def plot_heatmaps(network_windows_array,
                     heatmap_array = np.array([
                         nets[arrow_dir][target_s][net_type][other_s] for other_s in other_nodes_by_sensor[sensor].keys()
                     ])
-                    im = s_ax.imshow(heatmap_array)
+                    im = s_ax.imshow(heatmap_array,
+                                    vmin=0,
+                                    vmax=heatmap_max,
+                                    aspect='auto')
 
-                    time_indices = np.arange(0,len(start_indices),int(len(start_indices)/5))
-                    print(time_indices)
-                    times_list = np.array([int(time[i]) for i in time_indices])
-                    s_ax.set_xticks(time_indices)
-                    s_ax.set_xticklabels(times_list)
-                    s_ax.set_xlabel("time (s)")
+                    s_ax.set_xticks(time_tick_locs)
+                    s_ax.set_xticklabels(time_tick_labels)
 
-                    other_sensor_indices = np.arange(len(other_nodes_by_sensor))
-                    other_sensor_list = [rf"{v}" for v in other_nodes_by_sensor.values()]
+                    other_sensor_indices = np.arange(len(other_nodes_by_sensor[sensor]))
+                    other_sensor_list = [k[1:] for k in other_nodes_by_sensor[sensor].values()]
                     s_ax.set_yticks(other_sensor_indices)
                     s_ax.set_yticklabels(other_sensor_list)
 
-                    s_ax.set_title(rf"{NET_DICT[net_type]}, {SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]} {arrow_dir} {LONG_DICT[target_name]}")
-                    cbar = fig.colorbar(im, ax=s_ax, extend='max', fraction=0.02, pad=0.04)
+                    s_ax.set_title(rf"{SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]} {arrow_dir} {target_name[1:]} of {SENSOR_DICT_LONG[reverse_sensor_dict[target_name[0]]]}")
+            
+            s_ax.set_xlabel("time (s)")
+            cbar_ax = fig.add_axes([0.85, 0.15, 0.04, 0.7]) # Positions the colorbar
+            cbar = fig.colorbar(im, cax=cbar_ax)
+            cbar.set_label(label='Network Value', labelpad=15)
 
 # fig, ax = plt.subplots(figsize=(12, 6), constrained_layout=True) 
 # im = ax.imshow(
