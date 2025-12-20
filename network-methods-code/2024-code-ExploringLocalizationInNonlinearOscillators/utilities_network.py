@@ -1,5 +1,4 @@
 import inspect
-
 import numpy as np
 from matplotlib import pyplot as plt
 import networkx as nx
@@ -8,10 +7,6 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from contextlib import redirect_stdout
 import io
 from pyunicorn.timeseries.inter_system_recurrence_network import InterSystemRecurrenceNetwork
-
-source_code_package = inspect.getsource(InterSystemRecurrenceNetwork)
-print(source_code_package[:200]) # Print first 200 characters
-
 from pathlib import Path
 import os
 
