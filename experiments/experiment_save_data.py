@@ -63,6 +63,10 @@ if __name__ == "__main__":
         for q in raw_quantities:
             data_dict[s][q] = data_dict[s][q][active_slice]
 
+    # Get omega_xy
+    for s in sensor_ids:
+        data_dict[s]['wxy'] = np.sqrt(data_dict[s]['wx']**2 + data_dict[s]['wy']**2)
+
     # Get Euler Angle derivatives
     for s in sensor_ids:
         data_dict[s]['phidot'],data_dict[s]['thetadot'],data_dict[s]['psidot'] = get_euler_derivatives(
