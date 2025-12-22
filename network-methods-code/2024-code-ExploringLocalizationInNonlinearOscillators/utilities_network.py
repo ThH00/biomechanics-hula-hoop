@@ -6,7 +6,6 @@ from network_computation import compute_functional_network, compute_functional_n
 from matplotlib.animation import FuncAnimation, PillowWriter
 from contextlib import redirect_stdout
 import io
-from pyunicorn.timeseries.inter_system_recurrence_network import InterSystemRecurrenceNetwork
 from pathlib import Path
 import os
 
@@ -14,6 +13,7 @@ SYMDICT = {
     'wx': r"$\omega_{x}$",
     'wy': r"$\omega_{y}$",
     'wz': r"$\omega_{z}$",
+    'wxy': r"$\omega_{xy}$",
     'dx': r"$d_{x}$",
     'dy': r"$d_{y}$",
     'dz': r"$d_{z}$",
@@ -384,8 +384,8 @@ def plot_heatmaps(network_windows_array,
                 mapping, target_nodes,
                 heatmap_target_quantities,
                 width_scale,
-                heatmap_max,
                 time,
+                heatmap_max=None,
                 window_size=100,
                 step_size=5,
                 plot_filename_prefix = 'network_time',
@@ -473,6 +473,8 @@ def plot_heatmaps(network_windows_array,
                                     figsize=(10,2.5*len(target_nodes)),
                                     sharex=True)
             fig.subplots_adjust(right=0.82,left=0.05) # make room for the shared colorbar on the right
+            heatmap_maxes = []
+            ims = []
             for s_idx,sensor in enumerate(sensor_set):
                 for target_s,target_name in target_nodes.items():
                     if len(sensor_set) > 1:
@@ -482,9 +484,16 @@ def plot_heatmaps(network_windows_array,
                     heatmap_array = np.array([
                         nets[arrow_dir][target_s][net_type][other_s] for other_s in other_nodes_by_sensor[sensor].keys()
                     ])
+                    current_max = np.max(heatmap_array)
+                    if heatmap_max is None:
+                        vmax = current_max
+                        heatmap_maxes.append(current_max)
+                    else:
+                        vmax = heatmap_max
+                        heatmap_maxes.append(heatmap_max)
                     im = s_ax.imshow(heatmap_array,
                                     vmin=0,
-                                    vmax=heatmap_max,
+                                    vmax=vmax,
                                     aspect='auto')
 
                     s_ax.set_xticks(time_tick_locs)
@@ -496,35 +505,15 @@ def plot_heatmaps(network_windows_array,
                     s_ax.set_yticklabels(other_sensor_list)
 
                     s_ax.set_title(rf"{SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]} {arrow_dir} {target_name[1:]} of {SENSOR_DICT_LONG[reverse_sensor_dict[target_name[0]]]}")
+                    
+                    ims.append(im)
             
             s_ax.set_xlabel("time (s)")
+            for im in ims:
+                im.set_clim(0, np.max(heatmap_maxes))
             cbar_ax = fig.add_axes([0.85, 0.15, 0.04, 0.7]) # Positions the colorbar
             cbar = fig.colorbar(im, cax=cbar_ax)
             cbar.set_label(label='Network Value', labelpad=15)
-
-# fig, ax = plt.subplots(figsize=(12, 6), constrained_layout=True) 
-# im = ax.imshow(
-#     identity_error_matrix,
-#     #vmin=0, vmax=np.nanmax(identity_error_matrix),
-#     vmin=0, vmax=1.2,
-#     aspect='equal', 
-#     origin='lower',
-#     cmap='viridis'
-# )
-# cbar = fig.colorbar(im, ax=ax, extend='max', fraction=0.02, pad=0.04)
-# # cbar.set_label("Absolute Relative Error (ARE, $\epsilon$)", fontsize=20, fontname='serif')
-# cbar.set_label("$\\epsilon$:$L_2$ Error (mean) \n(normalized)", fontsize=14)
-# cbar.ax.tick_params(labelsize=15)
-
-# ax.set_xlabel("Event index", fontsize=22)
-# ax.set_ylabel("Channel", fontsize=22)
-# ax.set_xticks(np.arange(num_events))
-# if DROP10:
-#     ax.set_xticklabels(np.delete(np.arange(1, num_events+2),9), rotation=45, fontsize=15)
-# else:
-#     ax.set_xticklabels(np.arange(1, num_events+1), rotation=45, fontsize=15)
-# ax.set_yticks(np.arange(len(channel_numbers)))
-# ax.set_yticklabels(channel_numbers, fontsize=15)
 
             # e.g., heatmaps/angular_velocities/to_hoop/
             filedir = Path(str(plot_filename_prefix))/f"{arrow_dir}_hoop/"
@@ -686,27 +675,3 @@ def animate_networks(network_windows_array,
     print(f"Animation saved as {animation_filename}")
 
 
-def get_time_spheres(   
-        data, 
-        x_sensor,
-        x_quantity,
-        y_sensor,
-        y_quantity,
-        window_size=100,
-        step_size=5,
-        epsilon_x = 0.2,
-        epsilon_y = 0.2,
-        epsilon_xy = 0.15,
-        ):
-    
-    from matplotlib.patches import Ellipse
-    import sys
-    sys.path.append("../visualizations")
-    from visualization_utilities import plot_Axy, get_Axy2
-
-    t = data[x_sensor]['time']
-    x = data[x_sensor][x_quantity]
-    y = data[y_sensor][y_quantity]
-
-    Axy, RRx, RRy, RRxy = get_Axy2(t,x,y,epsilon_x, epsilon_y, epsilon_xy)
-    plot_Axy(t,x,y,Axy)
