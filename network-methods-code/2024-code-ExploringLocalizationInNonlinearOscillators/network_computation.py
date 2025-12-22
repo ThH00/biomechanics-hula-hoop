@@ -384,6 +384,46 @@ def network_computation(data_directory_main, result_directory_main, **kwargs):
                     nx.write_edgelist(G, os.path.join(result_directory, 'G_cartesian'))
 
 
+def align_phase(ts1, ts2):
+    """
+    Adjusts ts1 and ts2 such that (ts1 - ts2) is between -pi and pi.
+    This is done by adding/subtracting multiples of 2*pi to the difference.
+    """
+    # Calculate the raw difference
+    diff = ts1 - ts2
+    
+    # Map the difference to the range [-pi, pi]
+    # The formula: ((diff + pi) % (2*pi)) - pi
+    adjusted_diff = ((diff + np.pi) % (2 * np.pi)) - np.pi
+    
+    # To 'align' the series, we can adjust ts1 to match ts2's reference frame
+    ts1_aligned = ts2 + adjusted_diff
+    
+    return ts1_aligned, ts2
+
+def align_multiple_series(data, ref_idx=0):
+    """
+    Aligns multiple time series to a reference series.
+    
+    Parameters:
+    data: np.ndarray of shape (time_steps, num_series)
+    ref_idx: index of the series to use as the reference
+    """
+    # Extract reference column and reshape for broadcasting
+    ref_series = data[:, [ref_idx]] 
+    
+    # Calculate difference between all series and the reference
+    diff = data - ref_series
+    
+    # Apply the wrapping logic: ((diff + pi) % 2pi) - pi
+    # This finds the shortest angular distance for every point
+    wrapped_diff = ((diff + np.pi) % (2 * np.pi)) - np.pi
+    
+    # Reconstruct the aligned data
+    aligned_data = ref_series + wrapped_diff
+    
+    return aligned_data
+
 # if __name__ == '__main__':
 
 #     # data directory
