@@ -223,7 +223,6 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
 
     plt.title("Network Visualization: Highlighting Connections to hoop nodes", fontsize=14)
     plt.axis('off') 
-    plt.show()
 
     return plt.gcf()
 
