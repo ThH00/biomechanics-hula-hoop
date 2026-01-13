@@ -38,7 +38,10 @@ SYMDICT = {
     'Az': r"$A_{z}$",
     'phi': r"$\phi$",
     'theta': r"$\theta$",
-    'psi': r"$\psi$"
+    'psi': r"$\psi$",
+    'phidot': r"$\dot{\phi}$",
+    'thetadot': r"$\dot{\theta}$",
+    'psidot': r"$\dot{\psi}$"
 }
 
 def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
