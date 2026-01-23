@@ -104,10 +104,10 @@ def data_dict_to_3d_array(data_dict,
 
 def data_to_array_by_quantity(data_dict,
                               quantities={
-                                    'OR':[('time','wxy')],
-                                    'IB':[('time','wx'), ('time','wy'), ('time','wz')],
-                                    'IT':[('time','wx'), ('time','wy'), ('time','wz')],
-                                    'IL':[('time','wx'), ('time','wy'), ('time','wz')],
+                                    'OR':[['time','wxy']],
+                                    'IB':[['time','wx'], ['time','wy'], ['time','wz']],
+                                    'IT':[['time','wx'], ['time','wy'], ['time','wz']],
+                                    'IL':[['time','wx'], ['time','wy'], ['time','wz']],
                                 },
                               ntime=None):
     """
