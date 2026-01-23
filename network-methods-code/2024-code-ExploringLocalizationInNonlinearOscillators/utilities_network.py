@@ -102,6 +102,25 @@ def data_dict_to_3d_array(data_dict,
     else:
         return np.array(data_array).transpose(2,0,1)
 
+def data_to_array_by_quantity(data_dict,
+                              quantities={
+                                    'OR':[('time','wxy')],
+                                    'IB':[('time','wx'), ('time','wy'), ('time','wz')],
+                                    'IT':[('time','wx'), ('time','wy'), ('time','wz')],
+                                    'IL':[('time','wx'), ('time','wy'), ('time','wz')],
+                                },
+                              ntime=None):
+    """
+    Returns an array with shape = (ntime, nquantities, ncomponents per quantity)
+    Returns an array with shape = (1894,  10,          2)
+    """
+    data_array = [[data_dict[s][q] for q in qset] for s,qsets in quantities.items() for qset in qsets]
+    if ntime is not None:
+        return np.array(data_array).transpose(2,0,1)[:ntime]
+    else:
+        return np.array(data_array).transpose(2,0,1)
+
+
 def scale_data_array(data_array, scale_overall=True):
     if data_array.ndim == 2:
         if scale_overall:
@@ -134,7 +153,7 @@ def scale_data_array(data_array, scale_overall=True):
                     scaled_data_array[:,q,c] = (data_array[:,q,c] - component_mean) / component_std
             return scaled_data_array
 
-def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False):
+def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False, title=None):
     if not self_loops:
         np.fill_diagonal(C_xys, 0)
 
@@ -180,9 +199,9 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
         pos, 
         node_size=800, 
         node_color='lightgreen', 
-        edgecolors='black'
+        edgecolors=None
     )
-    nx.draw_networkx_labels(LG, pos, font_size=12, font_color='black')
+    nx.draw_networkx_labels(LG, pos, font_size=5, font_color='black')
 
 
     # 3b. Draw the SPECIAL Edges (Red/Orange color)
@@ -192,36 +211,36 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
         pos, 
         edgelist=special_edgelist,
         width=special_widths, 
-        edge_color='red', # Highlight color for special edges
-        alpha=0.7,
+        edge_color='black', # Highlight color for special edges
+        alpha=1.0,
         arrowsize=15, 
         connectionstyle='arc3,rad=0.1' 
     )
 
-    nx.draw_networkx_edges(
-        LG, 
-        pos, 
-        edgelist=special2_edgelist,
-        width=special2_widths, 
-        edge_color='blue', # Highlight color for special edges
-        alpha=0.5,
-        arrowsize=10, 
-        connectionstyle='arc3,rad=0.1' 
-    )
+    # nx.draw_networkx_edges(
+    #     LG, 
+    #     pos, 
+    #     edgelist=special2_edgelist,
+    #     width=special2_widths, 
+    #     edge_color='blue', # Highlight color for special edges
+    #     alpha=0.5,
+    #     arrowsize=10, 
+    #     connectionstyle='arc3,rad=0.1' 
+    # )
 
-    # 3c. Draw the OTHER Edges (Default color)
-    nx.draw_networkx_edges(
-        LG, 
-        pos, 
-        edgelist=other_edgelist,
-        width=other_widths, 
-        edge_color='gray', # Default color for other edges
-        alpha=0.5,
-        arrowsize=10, # Slightly smaller arrow/width for background edges
-        connectionstyle='arc3,rad=0.1'
-    )
+    # # 3c. Draw the OTHER Edges (Default color)
+    # nx.draw_networkx_edges(
+    #     LG, 
+    #     pos, 
+    #     edgelist=other_edgelist,
+    #     width=other_widths, 
+    #     edge_color='gray', # Default color for other edges
+    #     alpha=0.5,
+    #     arrowsize=10, # Slightly smaller arrow/width for background edges
+    #     connectionstyle='arc3,rad=0.1'
+    # )
 
-    plt.title("Network Visualization: Highlighting Connections to hoop nodes", fontsize=14)
+    plt.title(title, fontsize=14)
     plt.axis('off') 
 
     return plt.gcf()
@@ -389,6 +408,12 @@ def plot_heatmaps(network_windows_array,
                 step_size=5,
                 plot_filename_prefix = 'network_time',
                 return_figs = False):
+    
+    """
+    Make a heatmap for each origin node to target node network,
+    for each direction (to/from target), for each network
+    quantity (C_xy, T_xy)
+    """
 
     n_time = len(time)
     n_frames,_,n_nodes,_ = network_windows_array.shape
