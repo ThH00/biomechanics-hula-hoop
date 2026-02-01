@@ -153,47 +153,55 @@ def scale_data_array(data_array, scale_overall=True):
                     scaled_data_array[:,q,c] = (data_array[:,q,c] - component_mean) / component_std
             return scaled_data_array
 
-def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False, title=None):
+def plot_network(coeff_xys,
+                 mapping,
+                 target_nodes,
+                 width_scale=5.0,
+                 self_loops=False,
+                 title=None,
+                 diffs=False):
     if not self_loops:
-        np.fill_diagonal(C_xys, 0)
+        np.fill_diagonal(coeff_xys, 0)
 
-    G = nx.DiGraph(C_xys)
+    G = nx.DiGraph(coeff_xys)
 
     LG = nx.relabel_nodes(G, mapping)
     pos = nx.circular_layout(LG)
 
-    # Initialize lists for the two groups of edges
-    special_edgelist = []
-    special2_edgelist = []
-    other_edgelist = []
-    special_widths = []
-    special2_widths = []
-    other_widths = []
+    # Initialize lists for the three groups of edges
+
+    target_x_edges = []
+    target_y_edges = []
+    no_target_edges = []
+
+    target_x_widths = []
+    target_y_widths = []
+    no_target_widths = []
 
     # Iterate over all edges in the renamed graph LG
-    for u, v, data in LG.edges(data=True):
+    for x, y, data in LG.edges(data=True):
         weight = data.get('weight', 0)
         
         # Only consider edges with positive weight for drawing
         if weight > 0:
             width = weight * width_scale
             
-            # Check if either the source (u) or target (v) is in the target_nodes list
-            if u in target_nodes:
-                special_edgelist.append((u, v))
-                special_widths.append(width)
-            elif v in target_nodes:
-                special2_edgelist.append((u, v))
-                special2_widths.append(width)
+            # Check if either x is a target, or y is a target
+            if x in target_nodes:
+                target_x_edges.append((x, y))
+                target_x_widths.append(width)
+            elif y in target_nodes:
+                target_y_edges.append((x, y))
+                target_y_widths.append(width)
             else:
-                other_edgelist.append((u, v))
-                other_widths.append(width)
+                no_target_edges.append((x, y))
+                no_target_widths.append(width)
 
 
-    # --- 3. Draw the Network ---
+    # --- Draw the Network ---
     plt.figure(figsize=(10, 10))
 
-    # 3a. Draw ALL Nodes and Labels
+    # Draw ALL Nodes and Labels
     nx.draw_networkx_nodes(
         LG, 
         pos, 
@@ -201,44 +209,51 @@ def plot_network(C_xys, mapping, target_nodes, width_scale=5.0, self_loops=False
         node_color='lightgreen', 
         edgecolors=None
     )
-    nx.draw_networkx_labels(LG, pos, font_size=5, font_color='black')
+    nx.draw_networkx_labels(LG, pos, font_size=10, font_color='black')
 
 
-    # 3b. Draw the SPECIAL Edges (Red/Orange color)
-    # Draw these first so they are not fully covered by other edges
+    # Draw the edges
+    # if plotting Cxy,Txy (diffs is False), then we want to include all edges.
+    # if plotting Cdiff,Tdiff (diffs is True), then we only want edges where target is y,
+
+    # Edges where target is x.
+    # For Cdiff,Tdiff, a positive value means that Y -> X (other nodes affect the target).
+    # Plot these only.
     nx.draw_networkx_edges(
         LG, 
         pos, 
-        edgelist=special_edgelist,
-        width=special_widths, 
-        edge_color='black', # Highlight color for special edges
+        edgelist=target_x_edges,
+        width=target_x_widths, 
+        edge_color='black' if diffs else 'red',
         alpha=1.0,
-        arrowsize=15, 
+        arrowstyle='-', 
         connectionstyle='arc3,rad=0.1' 
     )
 
-    # nx.draw_networkx_edges(
-    #     LG, 
-    #     pos, 
-    #     edgelist=special2_edgelist,
-    #     width=special2_widths, 
-    #     edge_color='blue', # Highlight color for special edges
-    #     alpha=0.5,
-    #     arrowsize=10, 
-    #     connectionstyle='arc3,rad=0.1' 
-    # )
+    if not diffs: 
+        # Edges where target is y
+        nx.draw_networkx_edges(
+            LG, 
+            pos, 
+            edgelist=target_y_edges,
+            width=target_y_widths, 
+            edge_color='blue',
+            alpha=0.8,
+            arrowstyle='-', 
+            connectionstyle='arc3,rad=0.1' 
+        )
 
-    # # 3c. Draw the OTHER Edges (Default color)
-    # nx.draw_networkx_edges(
-    #     LG, 
-    #     pos, 
-    #     edgelist=other_edgelist,
-    #     width=other_widths, 
-    #     edge_color='gray', # Default color for other edges
-    #     alpha=0.5,
-    #     arrowsize=10, # Slightly smaller arrow/width for background edges
-    #     connectionstyle='arc3,rad=0.1'
-    # )
+        # Edges that don't involve the target nodes
+        nx.draw_networkx_edges(
+            LG, 
+            pos, 
+            edgelist=no_target_edges,
+            width=no_target_widths, 
+            edge_color='gray',
+            alpha=0.3,
+            arrowstyle='-', 
+            connectionstyle='arc3,rad=0.1'
+        )
 
     plt.title(title, fontsize=14)
     plt.axis('off') 
