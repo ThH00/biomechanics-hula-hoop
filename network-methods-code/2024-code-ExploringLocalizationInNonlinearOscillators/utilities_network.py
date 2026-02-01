@@ -32,21 +32,15 @@ SENSOR_DICT = {
     'OR': 'h',
     'IB': 'f',
     'IT': 't',
-    'IL': 'c'
+    'IL': 'm'
 }
 
 SENSOR_DICT_LONG = {
     'OR': 'hoop',
     'IB': 'femur',
     'IT': 'tibia',
-    'IL': 'cunei'
+    'IL': 'metatarsal'
 }
-
-PLAIN_DICT = {
-        f"{n}{symbol}": f"{SENSOR_DICT_LONG[s]}_{name}"  # e.g. "femur_phi")
-        for s,n in SENSOR_DICT.items()
-        for name,symbol in SYMDICT.items()
-    }
 
 LONG_DICT = {
         f"{n}{symbol}": f"{SENSOR_DICT_LONG[s]} {symbol}"  # e.g. "femur $\phi$")
@@ -59,11 +53,6 @@ NET_DICT = {
     'T_xys': r"$T_{xy}$",
 }
 
-MOTION_DICT = {
-    'wz': 'rotation',
-    'psi': 'rotation',
-    'dz': 'levitation',
-}
 
 def data_dict_to_2d_array(data_dict,
                           sensors=['OL','OR','IT','IL','IB'],
@@ -159,11 +148,22 @@ def plot_network(coeff_xys,
                  width_scale=5.0,
                  self_loops=False,
                  title=None,
-                 diffs=False):
+                 diffs=False,
+                 draw_to_target_edges=True,
+                 draw_from_target_edges=True,
+                 draw_no_target_edges=True):
     if not self_loops:
         np.fill_diagonal(coeff_xys, 0)
 
-    G = nx.DiGraph(coeff_xys)
+    # By default, the arrows are drawn from x to y.
+    # if Cdiff,Tdiff is given (diffs is True),
+    # then we must draw the graph based on Cdiff.T and Tdiff.T
+    # so that when Cdiff,Tdiff>0, the arrow is drawn from y to x.
+    if diffs:
+        coeff_yxs = coeff_xys.T
+        G = nx.DiGraph(coeff_yxs)
+    else:
+        G = nx.DiGraph(coeff_xys)
 
     LG = nx.relabel_nodes(G, mapping)
     pos = nx.circular_layout(LG)
@@ -205,55 +205,71 @@ def plot_network(coeff_xys,
     nx.draw_networkx_nodes(
         LG, 
         pos, 
-        node_size=800, 
+        node_size=2500, 
         node_color='lightgreen', 
         edgecolors=None
     )
-    nx.draw_networkx_labels(LG, pos, font_size=10, font_color='black')
+    nx.draw_networkx_labels(LG, pos, font_size=20, font_color='black')
 
 
     # Draw the edges
-    # if plotting Cxy,Txy (diffs is False), then we want to include all edges.
-    # if plotting Cdiff,Tdiff (diffs is True), then we only want edges where target is y,
 
-    # Edges where target is x.
-    # For Cdiff,Tdiff, a positive value means that Y -> X (other nodes affect the target).
-    # Plot these only.
-    nx.draw_networkx_edges(
-        LG, 
-        pos, 
-        edgelist=target_x_edges,
-        width=target_x_widths, 
-        edge_color='black' if diffs else 'red',
-        alpha=1.0,
-        arrowstyle='-', 
-        connectionstyle='arc3,rad=0.1' 
-    )
+    if draw_from_target_edges:
+        # Edges where target is x (y if diffs is True, because Cdiff.T,Tdiff.T are used).
+        # For Cdiff,Tdiff, a positive value means that X -> Y (the target affects other nodes).
+        # For Cxy,Txy, a positive value means Cxy,Txy>0 with target as x.
+        arrows = nx.draw_networkx_edges(
+            LG, 
+            pos, 
+            edgelist=target_x_edges,
+            width=target_x_widths, 
+            edge_color='red',
+            alpha=0.5 if diffs else 1.0,
+            arrowsize=10, 
+            connectionstyle='arc3,rad=0.1',
+            min_target_margin=20
+        )
+        for arrow in arrows:
+            arrow.set_joinstyle('miter')
+            arrow.set_capstyle('butt')
 
-    if not diffs: 
-        # Edges where target is y
-        nx.draw_networkx_edges(
+    if draw_to_target_edges:
+        # Edges where target is y (x if diffs is True, because Cdiff.T,Tdiff.T are used).
+        # For Cdiff,Tdiff, a positive value means that Y -> X (other nodes affect the target).
+        # For Cxy,Txy, a positive value means Cxy,Txy>0 with target as y.
+        arrows = nx.draw_networkx_edges(
             LG, 
             pos, 
             edgelist=target_y_edges,
             width=target_y_widths, 
-            edge_color='blue',
-            alpha=0.8,
-            arrowstyle='-', 
-            connectionstyle='arc3,rad=0.1' 
+            edge_color='black' if diffs else 'blue',
+            alpha=1.0,
+            arrowsize=10, 
+            connectionstyle='arc3,rad=0.1',
+            min_target_margin=20
         )
+        for arrow in arrows:
+            arrow.set_joinstyle('miter')
+            arrow.set_capstyle('butt')
 
+
+    if draw_no_target_edges:
         # Edges that don't involve the target nodes
-        nx.draw_networkx_edges(
+        arrows = nx.draw_networkx_edges(
             LG, 
             pos, 
             edgelist=no_target_edges,
             width=no_target_widths, 
             edge_color='gray',
-            alpha=0.3,
-            arrowstyle='-', 
-            connectionstyle='arc3,rad=0.1'
+            alpha=0.5,
+            arrowsize=10, 
+            connectionstyle='arc3,rad=0.1',
+            min_target_margin=20
         )
+        for arrow in arrows:
+            arrow.set_joinstyle('miter')
+            arrow.set_capstyle('butt')
+
 
     plt.title(title, fontsize=14)
     plt.axis('off') 
