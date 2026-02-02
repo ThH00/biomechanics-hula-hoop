@@ -320,28 +320,6 @@ def compute_functional_network(sol, rr, **kwargs):
 
     return G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs
 
-import matplotlib.pyplot as plt
-def get_adjacency(series,rr,verbose=False):
-    n_time,n_comp = series.shape
-    distances = np.zeros(n_time,n_time)
-    for i in range(n_time):
-        for j in range(i+1,n_time):
-            distances[i,j] = np.linalg.norm((i-j))
-    for i in range(n_time):
-        for j in range(i):
-            distances[i,j] = distances[j,i]
-    if verbose:
-        plt.imshow(distances)
-    measured_rr = 0
-    threshold = 0.1
-    while measured_rr < rr:
-        measured_rr = sum(distances-threshold)/(n_time**2)
-
-def get_cross_recurrence(series_x, series_y):
-    n_time,n_comp = series_x.shape
-    assert np.all(series_x.shape==series_y.shape)
-
-
 
 
 def compute_functional_network_by_matrix(sol, rr, **kwargs):
@@ -350,20 +328,30 @@ def compute_functional_network_by_matrix(sol, rr, **kwargs):
     Use matrix methods.
     """
 
+    metric = kwargs.get('metric','euclidean')
+
     n_time,n_nodes = sol.shape
 
     C_xys = np.zeros((n_nodes,n_nodes))
     T_xys = np.zeros((n_nodes,n_nodes))
 
-
     for i in range(n_nodes):
         series_x = sol[:,i]
-        AX = get_adjacency(series_x)
         for j in range(i+1,n_nodes):
             if j != i:
                 series_y = sol[:,j]
-                CRXY = None
-
+                net = InterSystemRecurrenceNetwork(series_x, series_y, recurrence_rate=rr, metric=metric)
+                AX = net.rp_x - np.eye(net.rp_x.shape[0])
+                AY = net.rp_y - np.eye(net.rp_y.shape[0])
+                CRXY = net.crp_xy
+                CRYX = CRXY.T
+                kXY = np.sum(CRXY[i])
+                C_xys[i,j] = (CRYX @ AY @ CRXY)[i,i] / ( kXY*(kXY-1) )
+                T_xys[i,j] = np.trace(CRYX @ AY @ CRXY) / ( np.sum(CRXY@CRYX) - np.sum(CRXY@CRYX) )
+    for i in range(n_nodes):
+        for j in range(i+1):
+            C_xys[j,i] = C_xys[i,j]
+            T_xys[j,i] = T_xys[i,j]
 
     return C_xys, T_xys
 
