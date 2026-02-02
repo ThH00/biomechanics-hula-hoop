@@ -116,6 +116,8 @@ def compute_functional_network_th(sol, th, **kwargs):
     #
 
     velocities_only = kwargs.get('velocities_only', False)
+    sandwiched_couples = kwargs.get('sandwiched_couples', True)
+    metric = kwargs.get('metric', 'euclidean')
 
     # get number of variables from each time series to use
     # default = use first half, i.e. the positional ones
@@ -144,11 +146,15 @@ def compute_functional_network_th(sol, th, **kwargs):
                 x = sol[:, i+n]
                 y = sol[:, j+n]
             else:
-                x = sol[:, i]
-                y = sol[:, j]
+                if sandwiched_couples:
+                    x = sol[:, [2*i,2*i+1]]
+                    y = sol[:, [2*j,2*j+1]]
+                else:
+                    x = sol[:, i]
+                    y = sol[:, j]
 
             # compute the network
-            net = InterSystemRecurrenceNetwork(x, y, threshold=th)
+            net = InterSystemRecurrenceNetwork(x, y, threshold=th, metric=metric)
 
             rrxy[i,j] = net.cross_recurrence_rate()
             rrx[i], rry[i] = net.internal_recurrence_rates()
@@ -199,6 +205,8 @@ def compute_functional_network(sol, rr, **kwargs):
     #
 
     velocities_only = kwargs.get('velocities_only', False)
+    sandwiched_couples = kwargs.get('sandwiched_couples', True)
+    metric = kwargs.get('metric', 'euclidean')
 
     # get number of variables from each time series to use
     # default = use first half, i.e. the positional ones
@@ -227,11 +235,15 @@ def compute_functional_network(sol, rr, **kwargs):
                 x = sol[:, i+n]
                 y = sol[:, j+n]
             else:
-                x = sol[:, i]
-                y = sol[:, j]
+                if sandwiched_couples:
+                    x = sol[:, [2*i,2*i+1]]
+                    y = sol[:, [2*j,2*j+1]]
+                else:
+                    x = sol[:, i]
+                    y = sol[:, j]
 
             # compute the network
-            net = InterSystemRecurrenceNetwork(x, y, recurrence_rate=rr)
+            net = InterSystemRecurrenceNetwork(x, y, recurrence_rate=rr, metric=metric)
             epsilon[i,j] = net.threshold
 
             # get the interesting metrics

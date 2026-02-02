@@ -227,7 +227,7 @@ def plot_network(coeff_xys,
             alpha=0.5 if diffs else 1.0,
             arrowsize=10, 
             connectionstyle='arc3,rad=0.1',
-            min_target_margin=20
+            min_target_margin=25
         )
         for arrow in arrows:
             arrow.set_joinstyle('miter')
@@ -246,7 +246,7 @@ def plot_network(coeff_xys,
             alpha=1.0,
             arrowsize=10, 
             connectionstyle='arc3,rad=0.1',
-            min_target_margin=20
+            min_target_margin=25
         )
         for arrow in arrows:
             arrow.set_joinstyle('miter')
@@ -264,7 +264,7 @@ def plot_network(coeff_xys,
             alpha=0.5,
             arrowsize=10, 
             connectionstyle='arc3,rad=0.1',
-            min_target_margin=20
+            min_target_margin=25
         )
         for arrow in arrows:
             arrow.set_joinstyle('miter')
