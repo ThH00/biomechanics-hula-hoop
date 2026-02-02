@@ -209,6 +209,7 @@ def compute_functional_network(sol, rr, **kwargs):
     velocities_only = kwargs.get('velocities_only', False)
     sandwiched_couples = kwargs.get('sandwiched_couples', True)
     metric = kwargs.get('metric', 'euclidean')
+    savez = kwargs.get('savez', True)
 
     # get number of variables from each time series to use
     # default = use first half, i.e. the positional ones
@@ -260,7 +261,8 @@ def compute_functional_network(sol, rr, **kwargs):
     C_diff = C_xys - C_yxs
     T_diff = T_xys - T_yxs
 
-    np.savez('network_arrays.npz', C_xys=C_xys, C_yxs=C_yxs, T_xys=T_xys, T_yxs=T_yxs, C_diff=C_diff, T_diff=T_diff, epsilon=epsilon)
+    if savez:
+        np.savez('network_arrays.npz', C_xys=C_xys, C_yxs=C_yxs, T_xys=T_xys, T_yxs=T_yxs, C_diff=C_diff, T_diff=T_diff, epsilon=epsilon)
 
     # create an array of edges according to information in C_xy and C_yx
     edges = []
@@ -317,6 +319,53 @@ def compute_functional_network(sol, rr, **kwargs):
     common_G = nx.DiGraph(common_edges)
 
     return G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs
+
+import matplotlib.pyplot as plt
+def get_adjacency(series,rr,verbose=False):
+    n_time,n_comp = series.shape
+    distances = np.zeros(n_time,n_time)
+    for i in range(n_time):
+        for j in range(i+1,n_time):
+            distances[i,j] = np.linalg.norm((i-j))
+    for i in range(n_time):
+        for j in range(i):
+            distances[i,j] = distances[j,i]
+    if verbose:
+        plt.imshow(distances)
+    measured_rr = 0
+    threshold = 0.1
+    while measured_rr < rr:
+        measured_rr = sum(distances-threshold)/(n_time**2)
+
+def get_cross_recurrence(series_x, series_y):
+    n_time,n_comp = series_x.shape
+    assert np.all(series_x.shape==series_y.shape)
+
+
+
+
+def compute_functional_network_by_matrix(sol, rr, **kwargs):
+    """
+    Compute C_xys,T_xys for the data array sol.
+    Use matrix methods.
+    """
+
+    n_time,n_nodes = sol.shape
+
+    C_xys = np.zeros((n_nodes,n_nodes))
+    T_xys = np.zeros((n_nodes,n_nodes))
+
+
+    for i in range(n_nodes):
+        series_x = sol[:,i]
+        AX = get_adjacency(series_x)
+        for j in range(i+1,n_nodes):
+            if j != i:
+                series_y = sol[:,j]
+                CRXY = None
+
+
+    return C_xys, T_xys
 
 
 def network_computation(data_directory_main, result_directory_main, **kwargs):
