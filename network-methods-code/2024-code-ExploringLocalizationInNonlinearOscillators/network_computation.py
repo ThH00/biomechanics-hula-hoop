@@ -118,6 +118,7 @@ def compute_functional_network_th(sol, th, **kwargs):
     velocities_only = kwargs.get('velocities_only', False)
     sandwiched_couples = kwargs.get('sandwiched_couples', True)
     metric = kwargs.get('metric', 'euclidean')
+    savez = kwargs.get('savez', True)
 
     # get number of variables from each time series to use
     # default = use first half, i.e. the positional ones
@@ -170,7 +171,8 @@ def compute_functional_network_th(sol, th, **kwargs):
             edges.append([i, j])
             edges_.append([i, j])
 
-    np.savez('network_arrays.npz', C_xys=C_xys, C_yxs=C_yxs, T_xys=T_xys, T_yxs=T_yxs, rrxy = rrxy, rrx=rrxy)
+    if savez:
+        np.savez('network_arrays.npz', C_xys=C_xys, C_yxs=C_yxs, T_xys=T_xys, T_yxs=T_yxs, rrxy = rrxy, rrx=rrxy)
 
     # generate graph
     G = nx.DiGraph(edges)
