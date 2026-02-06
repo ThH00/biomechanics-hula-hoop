@@ -50,13 +50,15 @@ if __name__ == "__main__":
 
     # Get steady hooping interval
     OR_groups, OR_averages = get_steady_hooping_interval(data_dict['OR']['psi'], dt=dt, threshold=0.55)
-    slice_start = input("Enter START of steady interval or press enter (default: 1500):  ")
-    slice_end = input("Enter END of steady interval or press enter (default: 2000):  ")
+    slice_start = input("Enter START of steady interval or press enter (default: 694):  ")
+
+    slice_end = input("Enter END of steady interval or press enter (default: 2588):  ")
     if slice_start == "":
-        slice_start = 1500
+        slice_start = 694
     if slice_end == "":
-        slice_end = 2000
+        slice_end = 2588
     active_slice = np.arange(int(slice_start), int(slice_end))
+    print(f"Using active slice from {slice_start} to {slice_end}, total length {len(active_slice)} samples.")
 
     # Trim to active slice
     for s in sensor_ids:
