@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # Get Euler Angle derivatives
     for s in sensor_ids:
         data_dict[s]['phidot'],data_dict[s]['thetadot'],data_dict[s]['psidot'] = get_euler_derivatives(
-            data_dict[s]['phi'],data_dict[s]['phi'],data_dict[s]['phi'],
+            data_dict[s]['phi'],data_dict[s]['theta'],data_dict[s]['psi'],
             data_dict[s]['wx'], data_dict[s]['wy'], data_dict[s]['wz'],
             )
 

@@ -141,16 +141,46 @@ def get_fixed_frame_acceleration(ax, ay, az,
 
     return Ax, Ay, Az
 
-def get_euler_derivatives(phi,theta,psi,
-                          wx,wy,wz):
-    transformation = np.array([
-        [np.zeros_like(phi), np.sin(phi)/np.cos(theta), np.cos(phi)/np.cos(theta)],
-        [np.zeros_like(phi), np.cos(phi),               -np.sin(phi)],
-        [np.ones_like(phi),  np.sin(phi)*np.tan(theta), np.cos(phi)*np.tan(theta)]
-        ]).transpose(2,0,1)
-    corotational_angular_velocities = np.array([[wx],[wy],[wz]]).transpose(2,0,1)
-    psidot, thetadot, phidot = (transformation @ corotational_angular_velocities).transpose(1,2,0)
-    return phidot.flatten(), thetadot.flatten(), psidot.flatten()
+# FOLLOWING FUNCTION IS WRONG - DO NOT USE
+# def get_euler_derivatives(phi,theta,psi,
+#                           wx,wy,wz):
+#     transformation = np.array([
+#         [np.zeros_like(phi), np.sin(phi)/np.cos(theta), np.cos(phi)/np.cos(theta)],
+#         [np.zeros_like(phi), np.cos(phi),               -np.sin(phi)],
+#         [np.ones_like(phi),  np.sin(phi)*np.tan(theta), np.cos(phi)*np.tan(theta)]
+#         ]).transpose(2,0,1)
+#     corotational_angular_velocities = np.array([[wx],[wy],[wz]]).transpose(2,0,1)
+#     psidot, thetadot, phidot = (transformation @ corotational_angular_velocities).transpose(1,2,0)
+#     return phidot.flatten(), thetadot.flatten(), psidot.flatten()
+
+def get_euler_derivatives(phi, theta, psi, wx, wy, wz):
+    # Initialize output arrays of the same length as input
+    n = len(phi)
+    phidot = np.zeros(n)
+    thetadot = np.zeros(n)
+    psidot = np.zeros(n)
+
+    for i in range(n):
+        # 1. Define the transformation matrix for the current orientation
+        # This maps body-frame rates (w) to Euler rates (dot)
+        W_inv = np.array([
+            [0, np.sin(phi[i])/np.cos(theta[i]), np.cos(phi[i])/np.cos(theta[i])],
+            [0, np.cos(phi[i]),               -np.sin(phi[i])],
+            [1, np.sin(phi[i])*np.tan(theta[i]), np.cos(phi[i])*np.tan(theta[i])]
+        ])
+
+        # 2. Define the angular velocity vector for the current step
+        w_body = np.array([wx[i], wy[i], wz[i]])
+
+        # 3. Perform the multiplication: [psi_dot, theta_dot, phi_dot]^T = W_inv * w
+        # Note: The original code returns them in (phi, theta, psi) order
+        euler_rates = W_inv @ w_body
+        
+        psidot[i]   = euler_rates[0]
+        thetadot[i] = euler_rates[1]
+        phidot[i]   = euler_rates[2]
+
+    return phidot, thetadot, psidot
 
 def offset_hoop_sensor(phi0,theta0,psi0,
                   dx0,dy0,dz0,
