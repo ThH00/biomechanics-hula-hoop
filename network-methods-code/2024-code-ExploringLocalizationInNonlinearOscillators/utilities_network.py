@@ -53,44 +53,6 @@ NET_DICT = {
     'T_xys': r"$T_{xy}$",
 }
 
-
-def data_dict_to_2d_array(data_dict,
-                          sensors=['OL','OR','IT','IL','IB'],
-                          quantities=['wx','wy','wz'],
-                          ntime=None):
-    """
-    Make a 2d array of nodal time series data for network analysis using `compute_functional_network`.
-    Each node has one single-component quantity.
-
-    Returns an array with shape = (ntime, nsensors x nquantities)
-    order:
-        sensor1 quantity1
-        sensor1 quantity2
-        sensor1 quantity3
-        sensor2 quantity1
-        ...
-    """
-    if ntime is not None:
-        return np.array([data_dict[s][q]for s in sensors for q in quantities]).T[:ntime]
-    else:
-        return np.array([data_dict[s][q]for s in sensors for q in quantities]).T
-    
-def data_dict_to_3d_array(data_dict,
-                          sensors=['OL','OR','IT','IL','IB'],
-                          quantities=[['dx','vx'],['dy','vy'],['dz','vz']],
-                          ntime=None):
-    """
-    Make a 3d array of nodal time series data for network analysis using `compute_functional_network`.
-    Each node has multiple components.
-    
-    Returns an array with shape = (ntime, nsensors x nquantities, ncomponents per quantity)
-    """ 
-    data_array = [[data_dict[s][q] for q in qset] for s in sensors for qset in quantities]
-    if ntime is not None:
-        return np.array(data_array).transpose(2,0,1)[:ntime]
-    else:
-        return np.array(data_array).transpose(2,0,1)
-
 def data_to_array_by_quantity(data_dict,
                               quantities={
                                     'OR':[['time','wxy']],
