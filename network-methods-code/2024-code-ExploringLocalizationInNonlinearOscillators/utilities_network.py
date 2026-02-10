@@ -209,7 +209,7 @@ def plot_network(coeff_xys,
         node_color='lightgreen', 
         edgecolors=None
     )
-    nx.draw_networkx_labels(LG, pos, font_size=20, font_color='black')
+    nx.draw_networkx_labels(LG, pos, font_size=12, font_color='black')
 
 
     # Draw the edges
@@ -270,8 +270,11 @@ def plot_network(coeff_xys,
             arrow.set_joinstyle('miter')
             arrow.set_capstyle('butt')
 
-
+    lim = 1.1
+    plt.ylim(-lim, lim) 
+    plt.xlim(-lim, lim)
     plt.title(title, fontsize=14)
+    plt.gca().set_aspect('equal', adjustable='box')
     plt.axis('off') 
 
     return plt.gcf()
