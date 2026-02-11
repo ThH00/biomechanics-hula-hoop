@@ -51,6 +51,8 @@ LONG_DICT = {
 NET_DICT = {
     'C_xys': r"$C_{xy}$",
     'T_xys': r"$T_{xy}$",
+    'C_diff': r'$C_{\mathrm{diff}}$',
+    'T_diff': r'$T_{\mathrm{diff}}$',
 }
 
 def data_to_array_by_quantity(data_dict,
@@ -243,13 +245,14 @@ def plot_network(coeff_xys,
 
 
 def get_time_networks(data,
-                      use_thresholds=True,
+                      use_thresholds=False,
                       th=(0.1, 0.1, 0.05),
                       rr=(0.06,0.06,0.02),
                       C_threshold=0.02,
                       T_threshold=0.02,
                       window_size=100,
                       step_size=5,
+                      sandwiched_couples=False,
                     ):
     n_time = data.shape[0]
     n_nodes = data.shape[1]
@@ -263,15 +266,17 @@ def get_time_networks(data,
         data_window = data[t_start:t_end, :]
         return data_window
 
-    def get_network_window(data_window,rr,C_threshold,T_threshold,n=n_nodes):
+    def get_network_window(data_window,n=n_nodes):
         """Get the networks data for the current window"""
         # Calculate the four networks
         with redirect_stdout(io.StringIO()): # suppress print statements
             if use_thresholds:
-                G, G_, common_G, C_xys, C_yxs, T_xys, T_yxs, rrx, rrxy = compute_functional_network_th(data_window, th=th, n=n)
+                G, G_, common_G, C_xys, C_yxs, T_xys, T_yxs, rrx, rrxy = compute_functional_network_th(
+                    data_window, th=th, n=n, sandwiched_couples=sandwiched_couples)
             else:
                 G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
-                    data_window, rr, C_threshold=C_threshold, T_threshold=T_threshold, n=n
+                    data_window, rr=rr, C_threshold=C_threshold, T_threshold=T_threshold,
+                    n=n,  sandwiched_couples=sandwiched_couples
                 )
         networks_data = [C_xys, C_yxs, T_xys, T_yxs]
         return networks_data
@@ -279,279 +284,90 @@ def get_time_networks(data,
     network_windows_array = np.empty((n_frames,4,n_nodes,n_nodes))
     for frame_index in range(n_frames):
         data_window = get_data_window(frame_index,start_indices,window_size)
-        network_windows_array[frame_index] = get_network_window(data_window,rr,C_threshold,T_threshold)
+        network_windows_array[frame_index] = get_network_window(data_window)
 
     return network_windows_array
 
 
-def plot_time_networks(network_windows_array,
-                       mapping, target_nodes,
-                       width_scale,
-                       time,
-                       window_size=100,
-                       step_size=5,
-                       plot_filename_prefix = 'network_time',
-                       return_figs = False):
-
-    n_time = len(time)
-    n_frames,_,n_nodes,_ = network_windows_array.shape
-    start_indices = np.arange(0, n_time - window_size, step_size)
-        
-    other_nodes = {s: name for s,name in mapping.items() if name not in target_nodes} # non-target nodes
-    target_nodes = {s: name for s,name in mapping.items() if name in target_nodes} # target nodes
-    arrow_dirs = ['to','from']
-    net_types = ['C_xys','T_xys']
-
-    # unique first letters of non-target node names
-    sensor_set = {node_name[0] for node_name in other_nodes.values()}
-    
-    other_nodes_by_sensor = {
-        sensor: {
-            s: node_name
-            for s,node_name in other_nodes.items()
-            if node_name[0]==sensor
-        }
-        for sensor in sensor_set
-    }
-    
-    if return_figs:
-        figs = {
-            arrow_dir: {
-                sensor: {
-                    net_type: None
-                    for net_type in net_types
-                }
-                for sensor in sensor_set
-            }
-            for arrow_dir in arrow_dirs
-        }
-
-    nets = {
-        arrow_dir: {
-            target_s: {
-                net_type: {
-                    other_s: np.empty(n_frames)
-                    for other_s in other_nodes.keys()
-                }
-                for net_type in net_types
-            }
-            for target_s in target_nodes.keys()
-        }
-        for arrow_dir in arrow_dirs
-    }
-
-    for target_s,target_name in target_nodes.items():
-        for frame_idx in range(n_frames):
-            C_xys,C_yxs,T_xys,T_yxs = network_windows_array[frame_idx]
-            assert np.allclose(C_xys,C_yxs.T)
-            assert np.allclose(T_xys,T_yxs.T)
-            net_at_frame = {
-                "C_xys": [width_scale*C_xys, width_scale*C_yxs],
-                "T_xys": [width_scale*T_xys, width_scale*T_yxs]
-            }
-            for dir_idx,arrow_dir in enumerate(arrow_dirs):
-                for net_type in net_types:
-                    for other_s in other_nodes.keys():
-                        # to: X_xys from non-target node to target node
-                        # from: X_yxs from non-target node to target node
-                        nets[arrow_dir][target_s][net_type][other_s][frame_idx] = net_at_frame[net_type][dir_idx][other_s][target_s]
-
-    reverse_sensor_dict = {v:k for k,v in SENSOR_DICT.items()}
-    for arrow_dir in arrow_dirs:
-        for sensor in sensor_set:
-            for net_type in net_types:
-
-                fig,ax = plt.subplots(nrows=len(target_nodes),ncols=1,
-                                      figsize=(10,2.5*len(target_nodes)),
-                                      sharex=True,
-                                      constrained_layout=True)
-                for tn_idx,(target_s,target_name) in enumerate(target_nodes.items()):
-                    if len(target_nodes) > 1:
-                        tn_ax = ax[tn_idx]
-                    else:
-                        tn_ax = ax
-                    for other_s,node_name in other_nodes_by_sensor[sensor].items():
-                        tn_ax.plot([time[i] for i in start_indices],nets[arrow_dir][target_s][net_type][other_s], label=LONG_DICT[node_name])
-                    tn_ax.set_title(rf"{NET_DICT[net_type]}, {SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]} {arrow_dir} {LONG_DICT[target_name]}")
-                    tn_ax.set_xlabel("time (s)")
-                    tn_ax.legend()
-                
-                # e.g., network_time_plots/angular_velocities/to_hoop/
-                filedir = Path(str(plot_filename_prefix))/f"{arrow_dir}_hoop/"
-                if not filedir.exists():
-                    os.makedirs(filedir)
-                # e.g., femur_Cxys.eps
-                filename = filedir/f"{SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]}_{net_type}.eps"
-                print(f"Saving {filename}")
-                fig.savefig(fname=filename, dpi=400)
-                
-                if return_figs:
-                    figs[arrow_dir][sensor][net_type] = fig
-
-                plt.close()
-
-    if return_figs:
-        return figs
-
-
 def plot_heatmaps(network_windows_array,
-                mapping, target_nodes,
-                heatmap_target_quantities,
-                width_scale,
+                node_labels,
+                target_node,
                 time,
-                heatmap_max=None,
+                heatmap_max=0.5,
                 window_size=100,
                 step_size=5,
-                plot_filename_prefix = 'network_time',
-                return_figs = False):
+                plot_filename_prefix='heatmaps',
+                return_figs=False):
     
     """
-    Make a heatmap for each origin node to target node network,
-    for each direction (to/from target), for each network
-    quantity (C_xy, T_xy)
+    Plot Cdiff and Tdiff heatmaps for all source nodes to the target node.
+
+    network_windows_array: (n_frames, 4 coeffs, n_nodes, n_nodes)
     """
 
     n_time = len(time)
     n_frames,_,n_nodes,_ = network_windows_array.shape
     start_indices = np.arange(0, n_time - window_size, step_size)
-        
-    other_nodes = {s: name for s,name in mapping.items() if name not in target_nodes} # non-target nodes
-    target_nodes = {s: name for s,name in mapping.items() if name in target_nodes} # target nodes
-    arrow_dirs = ['to','from']
-    net_types = ['C_xys','T_xys']
 
-    # unique first letters of non-target node names
-    sensor_set = {node_name[0] for node_name in other_nodes.values()}
-    
-    other_nodes_by_sensor = {
-        sensor: {
-            s: node_name
-            for s,node_name in other_nodes.items()
-            if node_name[0]==sensor
-        }
-        for sensor in sensor_set
+    target_idx = node_labels.index(target_node)
+    non_target_mask = np.array(node_labels) != target_node
+    non_target_indices = np.where(non_target_mask)[0]
+
+
+    diff_arrays = {
+        # C_xy - C_yx
+        'C_diff': (network_windows_array[:,0,target_idx,:] - network_windows_array[:,1,target_idx,:]).T[non_target_indices],
+        # T_xy - T_yx
+        'T_diff': (network_windows_array[:,2,target_idx,:] - network_windows_array[:,3,target_idx,:]).T[non_target_indices],
     }
-    
+
+    start_times = np.array([time[i] for i in start_indices])
+    tick_step = 2
+    t_min = np.ceil(start_times[0] / tick_step) * tick_step
+    t_max = np.floor(start_times[-1] / tick_step) * tick_step
+    clean_tick_values = np.arange(t_min, t_max + tick_step + 1, tick_step)
+    time_tick_locs = np.interp(clean_tick_values, start_times, np.arange(len(start_times)))
+    time_tick_labels = [int(t) for t in clean_tick_values]
+
     if return_figs:
-        figs = {
-            arrow_dir: {
-                sensor: {
-                    net_type: None
-                    for net_type in net_types
-                }
-                for sensor in sensor_set
-            }
-            for arrow_dir in arrow_dirs
-        }
+        figs = []
 
-    nets = {
-        arrow_dir: {
-            target_s: {
-                net_type: {
-                    other_s: np.empty(n_frames)
-                    for other_s in other_nodes.keys()
-                }
-                for net_type in net_types
-            }
-            for target_s in target_nodes.keys()
-        }
-        for arrow_dir in arrow_dirs
-    }
+    for coeff,heatmap_array in diff_arrays.items():
 
-    for target_s,target_name in target_nodes.items():
-        for frame_idx in range(n_frames):
-            C_xys,C_yxs,T_xys,T_yxs = network_windows_array[frame_idx]
-            assert np.allclose(C_xys,C_yxs.T)
-            assert np.allclose(T_xys,T_yxs.T)
-            net_at_frame = {
-                "C_xys": [width_scale*C_xys, width_scale*C_yxs],
-                "T_xys": [width_scale*T_xys, width_scale*T_yxs]
-            }
-            for dir_idx,arrow_dir in enumerate(arrow_dirs):
-                for net_type in net_types:
-                    for other_s in other_nodes.keys():
-                        # to: X_xys from non-target node to target node
-                        # from: X_yxs from non-target node to target node
-                        nets[arrow_dir][target_s][net_type][other_s][frame_idx] = net_at_frame[net_type][dir_idx][other_s][target_s]
+        heatmap_masked = np.ma.masked_less(heatmap_array,0)
 
-    reverse_sensor_dict = {v:k for k,v in SENSOR_DICT.items()}
-    
-    start_times = [time[i] for i in start_indices]
-    time_start = np.ceil(start_times[0]*2)/2 # round first start time up to nearest 0.5
-    time_end = np.floor(start_times[-1]*2)/2 # round last start time down to nearest 0.5
-    time_idx_start = np.where(start_times<=time_start)[0][-1]
-    time_idx_end = np.where(start_times>=time_end)[0][0]
-    dt = start_times[1]-start_times[0]
-    n_frames_per_tick = int(1/dt)
+        fig,ax = plt.subplots(figsize=(6,0.4*len(non_target_indices)))
 
-    time_tick_locs = np.arange(time_idx_start,time_idx_end,n_frames_per_tick)
-    time_tick_labels = [np.round(start_times[i],2) for i in time_tick_locs]
+        im = ax.imshow(heatmap_masked,
+                       vmax=heatmap_max,
+                       aspect='auto',
+                       origin='upper',
+                       cmap='viridis',
+                       interpolation='none') 
+        
+        for k in range(len(non_target_indices)):
+            ax.axhline(y=k + 0.5, color='white', linewidth=1.5)
 
-    for arrow_dir in arrow_dirs:
-        for net_type in net_types:
-            fig,ax = plt.subplots(nrows=len(sensor_set),ncols=1,
-                                    figsize=(10,2.5*len(target_nodes)),
-                                    sharex=True)
-            fig.subplots_adjust(right=0.82,left=0.05) # make room for the shared colorbar on the right
-            heatmap_maxes = []
-            ims = []
-            for s_idx,sensor in enumerate(sensor_set):
-                for target_s,target_name in target_nodes.items():
-                    if len(sensor_set) > 1:
-                        s_ax = ax[s_idx]
-                    else:
-                        s_ax = ax
-                    heatmap_array = np.array([
-                        nets[arrow_dir][target_s][net_type][other_s] for other_s in other_nodes_by_sensor[sensor].keys()
-                    ])
-                    current_max = np.max(heatmap_array)
-                    if heatmap_max is None:
-                        vmax = current_max
-                        heatmap_maxes.append(current_max)
-                    else:
-                        vmax = heatmap_max
-                        heatmap_maxes.append(heatmap_max)
-                    im = s_ax.imshow(heatmap_array,
-                                    vmin=0,
-                                    vmax=vmax,
-                                    aspect='auto')
+        ax.set_xticks(time_tick_locs)
+        ax.set_xticklabels(time_tick_labels)
 
-                    s_ax.set_xticks(time_tick_locs)
-                    s_ax.set_xticklabels(time_tick_labels)
+        other_sensor_indices = np.arange(len(node_labels)-1)
+        other_sensor_list = [node for node in node_labels if node != target_node]
+        ax.set_yticks(other_sensor_indices)
+        ax.set_yticklabels(other_sensor_list)
 
-                    other_sensor_indices = np.arange(len(other_nodes_by_sensor[sensor]))
-                    other_sensor_list = [k[1:] for k in other_nodes_by_sensor[sensor].values()]
-                    s_ax.set_yticks(other_sensor_indices)
-                    s_ax.set_yticklabels(other_sensor_list)
+        ax.set_title(rf"{NET_DICT[coeff]}, $X=${target_node}")
+        
+        ax.set_xlabel("time (s)")
+        cbar = plt.colorbar(im, ax=ax, fraction=0.06, pad=0.02)
+        cbar.set_label(label=NET_DICT[coeff])
 
-                    s_ax.set_title(rf"{SENSOR_DICT_LONG[reverse_sensor_dict[sensor]]} {arrow_dir} {target_name[1:]} of {SENSOR_DICT_LONG[reverse_sensor_dict[target_name[0]]]}")
-                    
-                    ims.append(im)
+        fig.savefig(fname=f"{plot_filename_prefix}_{coeff}", dpi=400)
             
-            s_ax.set_xlabel("time (s)")
-            for im in ims:
-                im.set_clim(0, np.max(heatmap_maxes))
-            cbar_ax = fig.add_axes([0.85, 0.15, 0.04, 0.7]) # Positions the colorbar
-            cbar = fig.colorbar(im, cax=cbar_ax)
-            cbar.set_label(label='Network Value', labelpad=15)
+        if return_figs:
+            figs.append[fig]
 
-            # e.g., heatmaps/angular_velocities/to_hoop/
-            filedir = Path(str(plot_filename_prefix))/f"{arrow_dir}_hoop/"
-            if not filedir.exists():
-                os.makedirs(filedir)
-            # e.g., femur_Cxys.eps
-            filename = filedir/f"{net_type}.eps"
-            print(f"Saving {filename}")
-            fig.savefig(fname=filename, dpi=400)
-            # for now, also saving png
-            filename = filedir/f"{net_type}.png"
-            print(f"Saving {filename}")
-            fig.savefig(fname=filename, dpi=400)
-                
-            if return_figs:
-                figs[arrow_dir][sensor][net_type] = fig
-
-            plt.close()
+        # plt.close()
 
     if return_figs:
         return figs
