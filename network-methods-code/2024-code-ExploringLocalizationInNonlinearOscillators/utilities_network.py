@@ -362,7 +362,7 @@ def plot_heatmaps(network_windows_array,
         cbar = plt.colorbar(im, ax=ax, fraction=0.06, pad=0.02)
         cbar.set_label(label=NET_DICT[coeff])
 
-        fig.savefig(fname=f"{plot_filename_prefix}_{coeff}", dpi=400)
+        fig.savefig(fname=f"{plot_filename_prefix}_{coeff}.svg", dpi=400)
             
         if return_figs:
             figs.append[fig]
