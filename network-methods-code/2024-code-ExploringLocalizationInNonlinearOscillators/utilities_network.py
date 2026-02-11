@@ -336,14 +336,16 @@ def plot_heatmaps(network_windows_array,
 
         heatmap_masked = np.ma.masked_less(heatmap_array,0)
 
-        fig,ax = plt.subplots(figsize=(6,0.4*len(non_target_indices)))
+        fig,ax = plt.subplots(figsize=(6,0.4*len(non_target_indices)), constrained_layout=True)
 
         im = ax.imshow(heatmap_masked,
                        vmax=heatmap_max,
                        aspect='auto',
                        origin='upper',
                        cmap='viridis',
-                       interpolation='none') 
+                       interpolation='none',
+                       rasterized=True
+                       ) 
         
         for k in range(len(non_target_indices)):
             ax.axhline(y=k + 0.5, color='white', linewidth=1.5)
