@@ -358,13 +358,13 @@ def plot_heatmaps(network_windows_array,
         ax.set_yticks(other_sensor_indices)
         ax.set_yticklabels(other_sensor_list)
 
-        ax.set_title(rf"{NET_DICT[coeff]}, $X=${target_node}")
+        ax.set_title(rf"{NET_DICT[coeff]}, $X=${target_node}, Window={window_size}")
         
         ax.set_xlabel("time (s)")
         cbar = plt.colorbar(im, ax=ax, fraction=0.06, pad=0.02)
         cbar.set_label(label=NET_DICT[coeff])
 
-        fig.savefig(fname=f"{plot_filename_prefix}_{coeff}.pdf", dpi=400)
+        fig.savefig(fname=f"{plot_filename_prefix}_{coeff}_{window_size}.pdf", dpi=400)
             
         if return_figs:
             figs.append[fig]
