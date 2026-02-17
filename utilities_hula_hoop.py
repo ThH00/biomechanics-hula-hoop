@@ -11,14 +11,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from itertools import groupby
 from operator import itemgetter
-from scipy.signal import find_peaks
-from mdof import modes, outid, modal, transform
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
 from scipy.fft import fft, fftfreq
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-import warnings
+
 
 SYMDICT = {
     'wx': r"$\omega_{x}$",
@@ -62,6 +58,7 @@ def data_to_array(data_dict,
         return np.array(data_array).T[:ntime]
     else:
         return np.array(data_array).T
+
 
 def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
     """
@@ -115,6 +112,7 @@ def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
 
     return groups, averages
 
+
 def fourier_spectrum(series, step):
     """
     Fourier amplitude spectrum of a signal, as a function of frequency.
@@ -153,15 +151,6 @@ def plot_FFT(freqencies,amplitudes,
     if legend:
         ax.legend(loc='upper left',bbox_to_anchor=(1.01, 1))
 
-def plot_PCA_FFT(X_pca,dt,subtitle,n_modes,xlim,colors=None):
-    fig,ax = plt.subplots(figsize=(6,3))
-    for i in range(n_modes):
-        freq,amp = fourier_spectrum(X_pca[:,i],step=dt)
-        if colors is not None:
-            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=1,xlim=xlim,color=colors[i])
-        else:
-            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=1,xlim=xlim)
-    fig.suptitle(f"FFT, {subtitle}")
 
 def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_slice=None,one_per=False):
     sensors_to_plot = sensor_labels.keys()
@@ -234,149 +223,6 @@ def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_
 
     return fig
 
-def perform_PCA(data_dict,active_slice,
-                sensors_to_include,quantities_to_include,
-                verbose=False):
-    
-    if verbose:
-        print(f"Quantities: {[f"{s}:{q}" for s in sensors_to_include for q in quantities_to_include]}")
-
-    # Step 1: Stack and transpose
-    if active_slice is not None:
-        X = np.vstack([data_dict[s][q][active_slice] for s in sensors_to_include for q in quantities_to_include]).T
-    else:
-        X = np.vstack([data_dict[s][q] for s in sensors_to_include for q in quantities_to_include]).T
-
-    if verbose:
-        print(f"shape(X): {np.shape(X)}")
-
-    # Step 2: Standardize
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    # Step 3: Apply PCA
-    pca = PCA(n_components=np.shape(X)[1])
-    X_pca = pca.fit_transform(X_scaled)
-    # Get the eigenvectors (principal directions)
-    eigenvalues = pca.explained_variance_
-    eigenvectors = pca.components_
-    explained_variance_ratio = pca.explained_variance_ratio_
-
-    # After fitting PCA
-    if verbose == 2:
-        print(f"{X_pca=}")
-    if verbose:
-        print("Eigenvalues:")
-        print(eigenvalues)
-    if verbose == 2:
-        print("Eigenvectors (Principal Directions):")
-        print(eigenvectors)
-    if verbose:
-        print("Explained Variance Ratio:")
-        print(explained_variance_ratio)
-
-    return X_pca, eigenvalues, eigenvectors, explained_variance_ratio
-
-def plot_PCA(X_pca,domain,active_slice,domain_label="Time (s)",subtitle=None,separate=False):
-    n_components = X_pca.shape[1]
-    if separate:
-        n = X_pca.shape[1]
-        fig, ax = plt.subplots(n,1,figsize=(8,n_components),constrained_layout=True)
-        for i in range(n):
-            if active_slice is not None:
-                ax[i].plot(domain[active_slice],X_pca[:,i]) 
-            else:
-                ax[i].plot(domain,X_pca[:,i]) 
-            ax[i].set_ylabel(rf"$\xi_{{{i+1}}}$")
-        ax[-1].set_xlabel(domain_label)
-        fig.suptitle(f"Principal Components Over {domain_label} (Scores)\n{subtitle}")
-    else:
-        plt.figure(figsize=(10, 4))
-        if active_slice is not None:
-            plt.plot(domain[active_slice], X_pca)
-        else:
-            plt.plot(domain, X_pca)
-        plt.xlabel(domain_label)
-        plt.title(f"Principal Components Over {domain_label} (Scores)\n{subtitle}")
-        plt.legend([r"$\xi_{1}$", r"$\xi_{2}$", r"$\xi_{3}$"])
-        plt.ylabel("Score")
-        plt.grid(True)
-        plt.show()
-
-def plot_PCA_eigenvalues(eigenvalues,subtitle=None):
-    plt.figure(figsize=(8,4))
-    plt.bar(range(1, len(eigenvalues) + 1), eigenvalues, color='skyblue', edgecolor='k')
-    plt.xlabel('Principal Component')
-    plt.ylabel('Eigenvalue')
-    plt.title(f"Eigenvalues of Principal Components\n{subtitle}")
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.tight_layout()
-    plt.show()
-
-def plot_PCA_variance_ratios(explained_variance_ratio,subtitle=None):
-    plt.figure(figsize=(8, 4))
-    plt.bar(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio, color='skyblue', edgecolor='k')
-    plt.xlabel('Principal Component')
-    plt.ylabel('Explained Variance Ratio')
-    plt.title(f"Explained Variance Ratio of Principal Components\n{subtitle}")
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.tight_layout()
-    plt.show()
-
-def plot_Scree(explained_variance_ratio,subtitle=None):
-    plt.figure(figsize=(8, 4))
-    plt.plot(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio, 'o-', color='blue')
-    plt.xlabel('Principal Component')
-    plt.ylabel('Explained Variance Ratio')
-    plt.title(f"Scree Plot\n{subtitle}")
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.tight_layout()
-    plt.show()
-
-def plot_Cumul_Scree(explained_variance_ratio,subtitle=None):
-    cumulative_variance = explained_variance_ratio.cumsum()
-
-    plt.figure(figsize=(8, 4))
-    plt.plot(range(1, len(cumulative_variance) + 1), cumulative_variance, 'o-', color='green')
-    plt.xlabel('Principal Component')
-    plt.ylabel('Cumulative Explained Variance')
-    plt.title(f"Cumulative Scree Plot\n{subtitle}")
-    plt.grid(True, linestyle='--', alpha=0.6)
-    plt.tight_layout()
-    plt.show()
-
-def plot_PCA_phase_portait(X_pca,subtitle=None):
-    plt.figure(figsize=(10, 4))
-    plt.plot(X_pca[:,0],X_pca[:,1],'.')
-    plt.title(f"Phase Portrait, First Two Principal Components\n{subtitle}")
-    plt.xlabel(r"$\xi_{1}$")
-    plt.ylabel(r"$\xi_{2}$")
-    plt.grid(True)
-    plt.show()
-
-def plot_PCA_modes(eigenvectors,sensors_to_include,quantities_to_include,sensor_labels,n_modes):
-    n_sensors_total = eigenvectors.shape[1]
-    n_sensors = len(sensors_to_include)
-    n_quantities = len(quantities_to_include)
-    n_rows = n_modes
-    n_cols = n_sensors
-    x_vals = np.arange(n_quantities)
-
-    _,ax = plt.subplots(n_rows, n_cols, figsize=(0.6*n_sensors_total, n_modes),
-                           constrained_layout=True, sharex=True, sharey=True)
-
-    for i in range(n_rows): # Each row is a mode with n_senors sensors
-        for j in range(n_cols): # Each column is a sensor with n_quantities quantities
-            ax[i,j].plot(eigenvectors[i, n_quantities*j:n_quantities*(j+1)], '.', markersize=12)
-            # ax[i,j].stem(x_vals, eigenvectors[i, n_quantities*j:n_quantities*(j+1)])
-            ax[i,j].axhline(0, color='gray', linestyle='--', linewidth=0.8)
-            ax[i,j].set_xticks(x_vals)
-            ax[i,j].set_xticklabels(quantities_to_include,rotation=45)
-            ax[-1,j].set_xlabel(sensor_labels[sensors_to_include[j]])
-            ax[i,j].set_ylim(-1, 1)
-        ax[i,0].set_ylabel(rf"$\xi_{{{i+1}}}$")
-
-        plt.savefig('PCA_modes.eps', format='eps')
 
 def plot_PCA_modes_by_segment(eigenvectors, quantities, n_modes=6):
     sensors = []
@@ -413,4 +259,40 @@ def plot_PCA_modes_by_segment(eigenvectors, quantities, n_modes=6):
         ax[-1,j].set_xlabel(s)
         ax[-1,-1].set_xlim(-0.1,1.11)
     
+    fig.suptitle("Principal Component Analysis")
+
+    return fig
+
+def plot_PCA_variance_ratios(explained_variance_ratio):
+    plt.figure(figsize=(6,4))
+    plt.bar(range(1, len(explained_variance_ratio) + 1), explained_variance_ratio, color='skyblue', edgecolor='k')
+    plt.xlabel('Principal Component')
+    plt.ylabel('Explained Variance Ratio')
+    plt.title(f"Explained Variance Ratio of Principal Components")
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.tight_layout()
+    return plt.gcf()
+
+def plot_PCA_phase_portait(X_pca):
+    plt.figure(figsize=(6,4), constrained_layout=True)
+    plt.plot(X_pca[:,0],X_pca[:,1],'.')
+    plt.title(f"Phase Portrait, First Two Principal Components")
+    plt.xlabel(r"$\xi_{1}$")
+    plt.ylabel(r"$\xi_{2}$")
+    plt.grid(True)
+    return plt.gcf()
+
+def plot_PCA_FFT(X_pca,dt,n_modes=None,xlim=None,colors=None):
+    if n_modes is None:
+        n_modes = X_pca.shape[1]
+    fig,ax = plt.subplots(figsize=(6,3), constrained_layout=True)
+    if xlim is None:
+        xlim = (0,5)
+    for i in range(n_modes):
+        freq,amp = fourier_spectrum(X_pca[:,i],step=dt)
+        if colors is not None:
+            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=1,xlim=xlim,color=colors[i])
+        else:
+            plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=1,xlim=xlim)
+    fig.suptitle(f"FFT")
     return fig

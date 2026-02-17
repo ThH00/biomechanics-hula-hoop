@@ -5,7 +5,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from utilities_hula_hoop import data_to_array, plot_PCA_modes_by_segment
+from utilities_hula_hoop import (data_to_array,
+                                 plot_PCA_modes_by_segment,
+                                 plot_PCA_variance_ratios,
+                                 plot_PCA_phase_portait,
+                                 plot_PCA_FFT
+                                 )
 
 if __name__ == "__main__":
 
@@ -54,13 +59,24 @@ if __name__ == "__main__":
     eigenvalues = pca.explained_variance_
     eigenvectors = pca.components_
     explained_variance_ratio = pca.explained_variance_ratio_
-    X_PCA_hftc = X_pca
+    fig_PCA = plot_PCA_modes_by_segment(eigenvectors,quantities)
+    fig_PCA.savefig(OUT_DIR/'PCA.pdf')
 
-    fig = plot_PCA_modes_by_segment(eigenvectors,quantities)
-    fig.savefig(OUT_DIR/'PCA.pdf', dpi=400)
+    fig_var = plot_PCA_variance_ratios(explained_variance_ratio)
+    fig_var.savefig(OUT_DIR/'PCA_variance_ratios.pdf')
+
+    fig_phase = plot_PCA_phase_portait(X_pca)
+    fig_phase.savefig(OUT_DIR/'PCA_phase_portrait.pdf')
+
+    time = data_dict['hoop']['time']
+    fig_FFT = plot_PCA_FFT(X_pca,dt=time[1]-time[0])
+    fig_FFT.savefig(OUT_DIR/'PCA_FFT.pdf')
 
     if VERBOSE:
-        print(f"\nPCA Plot saved as {str(OUT_DIR/'PCA.pdf')}")
         print("\nExplained Variance Ratios:", explained_variance_ratio)
-        fig.show()
+        print(f"\nPCA Plot saved as {str(OUT_DIR/'PCA.pdf')}")
+        print(f"Variance Ratio Plot saved as {str(OUT_DIR/'PCA_variance_ratios.pdf')}")
+        print(f"Phase Portrait Plot saved as {str(OUT_DIR/'PCA_phase_portrait.pdf')}")
+        print(f"PCA FFT saved as {str(OUT_DIR/'PCA_FFT.pdf')}")
+        plt.show()
 
