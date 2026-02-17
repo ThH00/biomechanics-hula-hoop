@@ -57,10 +57,10 @@ if __name__ == "__main__":
     X_PCA_hftc = X_pca
 
     fig = plot_PCA_modes_by_segment(eigenvectors,quantities)
-    plt.savefig(OUT_DIR/'PCA.pdf', dpi=400)
+    fig.savefig(OUT_DIR/'PCA.pdf', dpi=400)
 
     if VERBOSE:
         print(f"\nPCA Plot saved as {str(OUT_DIR/'PCA.pdf')}")
         print("\nExplained Variance Ratios:", explained_variance_ratio)
-        plt.show()
+        fig.show()
 
