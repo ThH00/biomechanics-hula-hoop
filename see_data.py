@@ -42,9 +42,9 @@ if __name__ == "__main__":
         print(f"Angular velocities plot saved as {str(OUT_DIR/"angular_velocities.pdf")}")
     # Euler derivatives
     quantities = ['phidot','thetadot','psidot']
-    data_dict_wxyz = {sensor: {q:v for q,v in serieses.items() if q in quantities}
+    data_dict_ptpdot = {sensor: {q:v for q,v in serieses.items() if q in quantities}
                       for sensor,serieses in data_dict.items()}
-    fig = plot_time_histories(sensor_labels, data_dict_wxyz, time, title="", one_per=True)
+    fig = plot_time_histories(sensor_labels, data_dict_ptpdot, time, title="", one_per=True)
     fig.show()
     fig.write_image(OUT_DIR/"euler_derivatives.pdf", scale=2)
     if VERBOSE:
