@@ -44,6 +44,25 @@ SYMDICT = {
     'psidot': r"$\dot{\psi}$"
 }
 
+
+def data_to_array(data_dict,
+                quantities={
+                    'femur':['wx','wy','wz'],
+                    'tibia':['wx','wy','wz'],
+                    'metatarsal':['wx','wy','wz'],
+                    'hoop':['wxy','psidot'],
+                },
+                ntime=None):
+    """
+    Returns an array with shape = (ntime, nquantities)
+    Returns an array with shape = (1894,  11)
+    """
+    data_array = [data_dict[s][q] for s,qset in quantities.items() for q in qset]
+    if ntime is not None:
+        return np.array(data_array).T[:ntime]
+    else:
+        return np.array(data_array).T
+
 def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
     """
     The angle psi seems to be close to linear during steady hula hooping.
@@ -96,203 +115,6 @@ def get_steady_hooping_interval(psi, dt=1.0, threshold=0.45, window_size=50):
 
     return groups, averages
 
-def extract_rotation(phi, theta, psi,
-                     E1=np.array([1,0,0]),
-                     E2=np.array([0,1,0]),
-                     E3=np.array([0,0,1])):
-    """
-    From Euler angles psi on E3, theta on e2', and phi on e1'',
-    extract the local basis (e1,e2,e3) in terms of the fixed
-    basis (E1,E2,E3)
-    """
-    # First rotation by an angle psi about E3
-    e1p =  np.cos(psi)*E1 + np.sin(psi)*E2
-    e2p = -np.sin(psi)*E1 + np.cos(psi)*E2
-    e3p = E3
-    # Second rotation by an angle theta about e2p
-    e1pp = np.cos(theta)*e1p - np.sin(theta)*e3p
-    e2pp = e2p
-    e3pp = np.sin(theta)*e1p + np.cos(theta)*e3p
-    # Third rotation by an angle phi about e1pp
-    e1 = e1pp
-    e2 =  np.cos(phi)*e2pp+np.sin(phi)*e3pp
-    e3 = -np.sin(phi)*e2pp+np.cos(phi)*e3pp
-
-    return e1, e2, e3
-
-def get_fixed_frame_acceleration(ax, ay, az,
-                                 psi, theta, phi,
-                                 E1=np.array([1,0,0]),
-                                 E2=np.array([0,1,0]),
-                                 E3=np.array([0,0,1])):
-
-    n = np.size(psi)
-    a = np.zeros((3,n))
-
-    for i in range(n):
-        e1,e2,e3 = extract_rotation(phi[i],theta[i],psi[i],
-                                    E1=E1,E2=E2,E3=E3)
-        # acceleration in fixed frame
-        a[:,i] = ax[i]*e1 + ay[i]*e2 + az[i]*e3
-    # a = A1*E1+A2*E2+A3*E3
-    Ax = a[0,:]
-    Ay = a[1,:]
-    Az = a[2,:]
-
-    return Ax, Ay, Az
-
-# FOLLOWING FUNCTION IS WRONG - DO NOT USE
-# def get_euler_derivatives(phi,theta,psi,
-#                           wx,wy,wz):
-#     transformation = np.array([
-#         [np.zeros_like(phi), np.sin(phi)/np.cos(theta), np.cos(phi)/np.cos(theta)],
-#         [np.zeros_like(phi), np.cos(phi),               -np.sin(phi)],
-#         [np.ones_like(phi),  np.sin(phi)*np.tan(theta), np.cos(phi)*np.tan(theta)]
-#         ]).transpose(2,0,1)
-#     corotational_angular_velocities = np.array([[wx],[wy],[wz]]).transpose(2,0,1)
-#     psidot, thetadot, phidot = (transformation @ corotational_angular_velocities).transpose(1,2,0)
-#     return phidot.flatten(), thetadot.flatten(), psidot.flatten()
-
-def get_euler_derivatives(phi, theta, psi, wx, wy, wz):
-    # Initialize output arrays of the same length as input
-    n = len(phi)
-    phidot = np.zeros(n)
-    thetadot = np.zeros(n)
-    psidot = np.zeros(n)
-
-    for i in range(n):
-        # 1. Define the transformation matrix for the current orientation
-        # This maps body-frame rates (w) to Euler rates (dot)
-        W_inv = np.array([
-            [0, np.sin(phi[i])/np.cos(theta[i]), np.cos(phi[i])/np.cos(theta[i])],
-            [0, np.cos(phi[i]),               -np.sin(phi[i])],
-            [1, np.sin(phi[i])*np.tan(theta[i]), np.cos(phi[i])*np.tan(theta[i])]
-        ])
-
-        # 2. Define the angular velocity vector for the current step
-        w_body = np.array([wx[i], wy[i], wz[i]])
-
-        # 3. Perform the multiplication: [psi_dot, theta_dot, phi_dot]^T = W_inv * w
-        # Note: The original code returns them in (phi, theta, psi) order
-        euler_rates = W_inv @ w_body
-        
-        psidot[i]   = euler_rates[0]
-        thetadot[i] = euler_rates[1]
-        phidot[i]   = euler_rates[2]
-
-    return phidot, thetadot, psidot
-
-def offset_hoop_sensor(phi0,theta0,psi0,
-                  dx0,dy0,dz0,
-                  angle_along_hoop=141.5,
-                  radius=83.0/100/2):
-    """
-    Offset the initial location of a sensor that is a certain
-    angle offset from the reference sensor.
-    phi0, theta0, psi0, dx0, dy0, and dz0 are of the initial
-    angle and position of the reference sensor.
-    """
-    delta = np.deg2rad(angle_along_hoop)
-    ex, ey, ez = extract_rotation(phi0, theta0, psi0)
-    center_of_hoop = np.array([dx0,dy0,dz0]) - radius*ey
-    ray = np.cos(delta)*ex + np.sin(delta)*ey
-    initial_position = center_of_hoop + radius*ray
-    return initial_position
-
-def estimate_period(signal, method='psd',
-                    fs=120.0, plot=False,
-                    inputs=None):
-    """
-    Estimate the period of the signal. Available methods include:
-    fft:      Fast Fourier Transform
-    psd:      FFT of power spectral density
-    srim:     Time domain system identification by System Realization by
-              Information Matrix. Needs inputs; if None, uses Gaussian
-              white noise as input.
-    okid:     Time domain system identification by Observer Kalman 
-              Identification Algorithm. Needs inputs; if None, uses
-              Gaussian white noise as input.
-    autocorr: Find the lag that maximizes autocorrelation.
-    """
-
-    method = method.lower()
-
-    if method == 'fft':
-        periods, amplitudes = transform.fourier_spectrum(signal, step=1/fs)
-        fundamental_p, fundamental_a = modal.spectrum_modes(periods, amplitudes,
-                                                            sorted_by='height')
-        if plot:
-            fig,ax = plt.subplots()
-            ax.plot(periods,amplitudes)
-            ax.set_xlim(0,2)
-            ax.set_title('Fast Fourier Transform')
-            ax.set_xlabel('Period (s)')
-            ax.set_ylabel('Amplitude')
-            plt.show()
-        return fundamental_p[0]
-    elif method == 'psd':
-        periods, amplitudes = transform.power_spectrum(signal, step=1/fs)
-        fundamental_p, fundamental_a = modal.spectrum_modes(periods, amplitudes,
-                                                            sorted_by='height')
-        if plot:
-            fig,ax = plt.subplots()
-            ax.plot(periods,amplitudes)
-            ax.set_xlim(0,2)
-            ax.set_title('Power Spectral Density')
-            ax.set_xlabel('Period (s)')
-            ax.set_ylabel('Amplitude')
-            plt.show()
-        return fundamental_p[0]
-    elif method == 'srim':
-        if inputs == None:
-            inputs = np.random.normal(loc=0, scale=1, size=signal.size)
-        P,Phi = modes(inputs=inputs, outputs=signal, dt=1/fs,
-                      method='srim', order=2)
-        if len(P)>0:
-            return P[0]
-        else:
-            warnings.warn("No natural periods found by SRIM method.")
-    elif method == 'okid':
-        if inputs == None:
-            inputs = np.random.normal(loc=0, scale=1, size=signal.size)
-        P,Phi = modes(inputs=inputs, outputs=signal, dt=1/fs,
-                     method='okid-era', order=2)
-        if len(P)>0:
-            return P[0]
-        else:
-            warnings.warn("No natural periods found by SRIM method.")
-    elif method=='autocorr':
-        period_samples,period_time = estimate_period_autocorr(signal,fs,plot)
-        return period_time
-
-def estimate_period_autocorr(signal, fs=120.0, plot=False):
-    signal = signal - np.mean(signal)
-    autocorr = np.correlate(signal, signal, mode='full')
-    autocorr = autocorr[len(autocorr)//2:]
-
-    # Find all peaks
-    peaks, _ = find_peaks(autocorr)
-
-    if len(peaks) < 1:
-        raise ValueError("No peaks found in autocorrelation.")
-
-    # First peak after lag = 0 is the period
-    period_samples = peaks[0]
-    period_time = period_samples / fs
-
-    if plot:
-        _, ax = plt.subplots()
-        ax.plot(autocorr)
-        ax.axvline(period_samples, color='r', linestyle='--', label=f'Period ≈ {period_samples} samples ({period_time:.2f} s)')
-        ax.set_title("Autocorrelation")
-        ax.set_xlabel("Lag")
-        ax.set_ylabel("Autocorrelation")
-        ax.legend()
-        plt.show()
-
-    return period_samples, period_time
-
-
 def fourier_spectrum(series, step):
     """
     Fourier amplitude spectrum of a signal, as a function of frequency.
@@ -340,7 +162,6 @@ def plot_PCA_FFT(X_pca,dt,subtitle,n_modes,xlim,colors=None):
         else:
             plot_FFT(freq,amp,label=rf"$\xi_{{{i+1}}}$",ax=ax,title=False,legend=True,alpha=1,xlim=xlim)
     fig.suptitle(f"FFT, {subtitle}")
-
 
 def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_slice=None,one_per=False):
     sensors_to_plot = sensor_labels.keys()
@@ -557,41 +378,39 @@ def plot_PCA_modes(eigenvectors,sensors_to_include,quantities_to_include,sensor_
 
         plt.savefig('PCA_modes.eps', format='eps')
 
-def plot_PCA_modes_3D():
-    return
+def plot_PCA_modes_by_segment(eigenvectors, quantities, n_modes=6):
+    sensors = []
+    mapping = [[] for _ in quantities]
 
-
-from stl import mesh
-
-def center_and_scale_stl(stl_mesh, desired_height):
-    """
-    Centers an STL mesh at the origin and scales it to a specific height.
-
-    Args:
-        input_file_path (str): The path to the input STL file.
-        output_file_path (str): The path to save the modified STL file.
-        desired_height (float): The target height for the scaled model.
-    """
-
-    # Calculate the bounding box of the mesh
-    min_coords = stl_mesh.vectors.min(axis=0).min(axis=0)
-    max_coords = stl_mesh.vectors.max(axis=0).max(axis=0)
-
-    # Calculate dimensions and center
-    width = max_coords[0] - min_coords[0]
-    depth = max_coords[1] - min_coords[1]
-    height = max_coords[2] - min_coords[2]
-    center_offset = (min_coords + max_coords) / 2
-
-    # Step 1: Center the mesh at the origin
-    # Subtract the center of the bounding box from all mesh points
-    stl_mesh.vectors -= center_offset
-
-    # Step 2: Scale the mesh to the desired height
-    # Calculate the uniform scaling factor
-    scale_factor = desired_height / height
+    for i,(sensor,qset) in enumerate(quantities.items()):
+        sensors.append(sensor)
+        for q in qset:
+            mapping[i].append(q)
     
-    # Apply the scaling to all mesh points
-    stl_mesh.vectors *= scale_factor
+    n_rows = n_modes
+    n_sensors = len(sensors)
+    n_cols = n_sensors
 
-    return stl_mesh
+    fig,ax = plt.subplots(n_rows, n_cols,
+                          gridspec_kw={'width_ratios': [3,3,3,1.6]},
+                          figsize=(6.3, n_modes),
+                          sharex='col',
+                          sharey=True, 
+                          constrained_layout=True
+                          )
+
+    col_idx = 0
+    for j,s in enumerate(sensors): # Each column is a sensor with nq quantities
+        nq = len(mapping[j])
+        for i in range(n_rows): # Each row is a mode with n_senors sensors
+            ax[i,j].plot(eigenvectors[i, col_idx:col_idx+nq], '.', markersize=12)
+            ax[i,j].axhline(0, color='gray', linestyle='--', linewidth=0.8)
+            ax[i,j].set_ylim(-1, 1)
+            ax[i,0].set_ylabel(rf"$v_{{{i+1}}}$")
+        col_idx += nq
+        ax[-1,j].set_xticks(np.arange(nq))
+        ax[-1,j].set_xticklabels(mapping[j],rotation=45)
+        ax[-1,j].set_xlabel(s)
+        ax[-1,-1].set_xlim(-0.1,1.11)
+    
+    return fig
