@@ -16,7 +16,7 @@ O. M. O'Reilly.
 
 ---
 ## Getting Started
-Requirements are listed in 'requirements.txt' and can be installed via pip 
+Requirements are listed in `requirements.txt` and can be installed via pip 
 using `pip install -r requirements.txt`.
 
 To reproduce results of the paper, run `run_PCA.py` and `run_Network.py`
