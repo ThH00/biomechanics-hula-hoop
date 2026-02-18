@@ -19,14 +19,14 @@ import plotly.graph_objects as go
 from scipy.fft import fft, fftfreq
 import networkx as nx
 from network_computation import compute_functional_network
-from contextlib import redirect_stdout
-import io
+from pathlib import Path
 
 
 SYMDICT = {
     'wx': r"$\omega_{x}$",
     'wy': r"$\omega_{y}$",
     'wz': r"$\omega_{z}$",
+    'wxy': r"$\omega_{xy}$",
     'dx': r"$d_{x}$",
     'dy': r"$d_{y}$",
     'dz': r"$d_{z}$",
@@ -53,6 +53,14 @@ SENSOR_DICT = {
     'tibia': 't',
     'metatarsal': 'm'
 }
+
+NET_DICT = {
+    'C_xys': r"$C_{xy}$",
+    'T_xys': r"$T_{xy}$",
+    'C_diff': r'$C_{\mathrm{diff}}$',
+    'T_diff': r'$T_{\mathrm{diff}}$',
+}
+
 
 def data_to_array(data_dict,
                 quantities={
@@ -311,33 +319,6 @@ def plot_PCA_FFT(X_pca,dt,n_modes=None,xlim=None,colors=None):
     return fig
 
 
-SYMDICT = {
-    'wx': r"$\omega_{x}$",
-    'wy': r"$\omega_{y}$",
-    'wz': r"$\omega_{z}$",
-    'wxy': r"$\omega_{xy}$",
-    'dx': r"$d_{x}$",
-    'dy': r"$d_{y}$",
-    'dz': r"$d_{z}$",
-    'vx': r"$v_{x}$",
-    'vy': r"$v_{y}$",
-    'vz': r"$v_{z}$",
-    'phi': r"$\phi$",
-    'theta': r"$\theta$",
-    'psi': r"$\psi$",
-    'phidot': r"$\dot{\phi}$",
-    'thetadot': r"$\dot{\theta}$",
-    'psidot': r"$\dot{\psi}$",
-}
-
-
-NET_DICT = {
-    'C_xys': r"$C_{xy}$",
-    'T_xys': r"$T_{xy}$",
-    'C_diff': r'$C_{\mathrm{diff}}$',
-    'T_diff': r'$T_{\mathrm{diff}}$',
-}
-
 
 def data_to_array_by_quantity(data_dict,
                               quantities={
@@ -391,6 +372,53 @@ def scale_data_array(data_array, scale_overall=True):
             return scaled_data_array
 
 
+def run_network(data_dict,title,**config):
+    quantities = config['quantities']
+    target_nodes = config['target_nodes']
+    verbose = config['verbose']
+    save_arrays = config.get('save_arrays',False)
+    out_dir = config.get('out_dir',Path('plots'))
+
+    data = data_to_array_by_quantity(data_dict,
+                            quantities=quantities,
+                            ntime=config.get('ntime',None))
+    if verbose:
+        print(f"{title}: {data.shape=}")
+
+    
+    network = compute_functional_network(data,
+                                    config.get('rr',(0.03,0.03,0.02)),
+                                    n=config.get('n',np.shape(data)[1]),
+                                    sandwiched_couples=config.get('sandwiched_couples',False),
+                                    savez=config.get('savez',True),
+                                    verbose=verbose
+                                    )
+    
+    if save_arrays: # Save data and network arrays
+        np.save(out_dir/f"{title}.npy", data)
+        network_quantity_names = ['G', 'G_', 'common_G', 'T_diff', 'C_diff', 'C_xys', 'C_yxs', 'T_xys', 'T_yxs']
+        network_quantities = {q: network[i] for i,q in enumerate(network_quantity_names)}
+        for coeff in ['C_xys','T_xys','C_yxs','T_yxs']:
+            np.save(out_dir/f"{title}_{coeff}.npy", network_quantities[coeff])
+        if verbose:
+            print(f"Saved data array as {out_dir}/{title}_data.npy")
+            print(f"Saved network quantities as: \n"
+                  f"{out_dir}/{title}_C_xys.npy, "
+                  f"{out_dir}/{title}_T_xys.npy, "
+                  f"{out_dir}/{title}_C_yxs.npy, "
+                  f"{out_dir}/{title}_T_yxs.npy"
+                  )
+    
+    mapping = {}
+    idx = 0
+    for sensor,qsets in quantities.items():
+        for qset in qsets:
+            mapping[idx] = f"{SYMDICT[qset[-1]]},{sensor}"
+            idx += 1
+
+    return network, mapping, target_nodes
+
+
 def plot_network(coeff_xys,
                  mapping,
                  target_nodes,
@@ -400,7 +428,8 @@ def plot_network(coeff_xys,
                  diffs=False,
                  draw_to_target_edges=True,
                  draw_from_target_edges=True,
-                 draw_no_target_edges=True):
+                 draw_no_target_edges=True,
+                 verbose=False):
     if not self_loops:
         np.fill_diagonal(coeff_xys, 0)
 
@@ -529,8 +558,6 @@ def plot_network(coeff_xys,
 
 
 def get_time_networks(data,
-                      use_thresholds=False,
-                      th=(0.1, 0.1, 0.05),
                       rr=(0.03,0.03,0.02),
                       C_threshold=0.02,
                       T_threshold=0.02,
@@ -539,6 +566,7 @@ def get_time_networks(data,
                       sandwiched_couples=False,
                       verbose=False,
                     ):
+    
     n_time = data.shape[0]
     n_nodes = data.shape[1]
     start_indices = np.arange(0, n_time - window_size, step_size)
@@ -554,11 +582,10 @@ def get_time_networks(data,
     def get_network_window(data_window,n=n_nodes):
         """Get the networks data for the current window"""
         # Calculate the four networks
-        with True if verbose else redirect_stdout(io.StringIO()): # if not verbose, suppress print statements
-            G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
-                data_window, rr=rr, C_threshold=C_threshold, T_threshold=T_threshold,
-                n=n,  sandwiched_couples=sandwiched_couples
-            )
+        G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
+            data_window, rr=rr, C_threshold=C_threshold, T_threshold=T_threshold,
+            n=n,  sandwiched_couples=sandwiched_couples, verbose=verbose
+        )
         networks_data = [C_xys, C_yxs, T_xys, T_yxs]
         return networks_data
 

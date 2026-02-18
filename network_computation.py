@@ -118,6 +118,7 @@ Licensed under the GPLv3. See LICENSE in the project root for license informatio
 import networkx as nx
 from pyunicorn.timeseries.inter_system_recurrence_network import InterSystemRecurrenceNetwork
 import numpy as np
+import tqdm
 
 
 def common_elements(list1, list2):
@@ -169,7 +170,9 @@ def compute_functional_network(sol, rr, **kwargs):
     C_threshold = kwargs.get('C_threshold', 0)
     T_threshold = kwargs.get('T_threshold', 0)
 
-    # verbosity: if True, values of T_diff and C_diff and according edge will be printed
+    # verbosity: if 1 or True, progress bar will be shown
+    #            if >=2, recurrence network calculations will be printed 
+    #            if >=2, values of T_diff and C_diff and according edge will be printed
     verbose = kwargs.get('verbose', False)
 
     # iterate over each pairwise combi of variables, compute cross-rp, isrn and C,T measures
@@ -180,8 +183,12 @@ def compute_functional_network(sol, rr, **kwargs):
     T_yxs = np.zeros((n, n))
     epsilon = np.zeros((n,n))
 
+    if verbose:
+        iterator = tqdm.tqdm(range(n), desc=f"Progress over {n} nodes")
+    else:
+        iterator = range(n)
 
-    for i in range(n):
+    for i in iterator:
         for j in range(n):
             # choose time series
             if velocities_only:
@@ -196,9 +203,8 @@ def compute_functional_network(sol, rr, **kwargs):
                     y = sol[:, j]
 
             # compute the network
-            net = InterSystemRecurrenceNetwork(x, y, recurrence_rate=rr, metric=metric)
+            net = InterSystemRecurrenceNetwork(x, y, recurrence_rate=rr, metric=metric, silence_level=3-verbose)
             epsilon[i,j] = net.threshold
-
             # get the interesting metrics
             # - cross-clustering coefficient C_xy and C_yx
             # - cross-transitivity T_xy and T_yx
@@ -233,7 +239,7 @@ def compute_functional_network(sol, rr, **kwargs):
                     edges.append([j, i])
 
             # print for debugging
-            if verbose:
+            if verbose>=2:
                 print(f'combi: {i} and {j}, C_diff = {C_diff[i, j]:.4f}, entry: {edges} ')
 
     # generate graph
@@ -258,7 +264,7 @@ def compute_functional_network(sol, rr, **kwargs):
                 #     edges_.append([j, i])
 
             # print for debugging
-            if verbose:
+            if verbose>=2:
                 print(f'combi: {i} and {j}, Tdiff = {T_diff[i, j]:.4f}, entry: {edges_} ')
 
     # generate graph
