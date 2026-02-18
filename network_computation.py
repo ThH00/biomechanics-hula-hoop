@@ -9,10 +9,10 @@ accompanying code and data for the paper, submitted in 2026, to the
 Proceedings of the Royal Society A, "The Biomechanics of Hula Hooping"
 by C. Chern, T. E. Honein, and O. M. O'Reilly.
 
-The functions contained in this file are adapted from code originally written as
-part of the accompanying code for the paper "Exploring localization in nonlinear
-oscillator systems through network-based predictions" by C. Geier and N. Hoffmann
-published in Chaos 35 (5) 2025 doi: 10.1063/5.0265366 .
+The functions contained in this file are adapted from the accompanying
+code for the paper "Exploring localization in nonlinear oscillator systems
+through network-based predictions" by C. Geier and N. Hoffmann published
+in Chaos 35 (5) 2025 doi: 10.1063/5.0265366 .
 Available at https://arxiv.org/abs/2407.05497
 
 Licensed under the GPLv3. See LICENSE in the project root for license information.
