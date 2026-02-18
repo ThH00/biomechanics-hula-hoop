@@ -17,7 +17,7 @@ Available at https://arxiv.org/abs/2407.05497
 
 Licensed under the GPLv3. See LICENSE in the project root for license information.
 
-20.02.2026
+February 20, 2026
 
 
 -------- Original Comments by C. Geier and N. Hoffmann -------

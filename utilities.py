@@ -6,7 +6,7 @@ by C. Chern, T. E. Honein, and O. M. O'Reilly.
 
 Licensed under the GPLv3. See LICENSE in the project root for license information.
 
-20.02.2026
+February 20, 2026
 
 """
 
@@ -278,8 +278,8 @@ def plot_top_frequencies(data_dict, data_axes, sampling_rate, sensor_colors, axi
             plt.plot(
                 freqs,
                 mags,
-                marker=axis_markers[axis], # Matplotlib marker
-                linestyle='', # Only show markers, no connecting line
+                marker=axis_markers[axis],
+                linestyle='',
                 markersize=10,
                 color=color,
                 markeredgecolor='DarkSlateGrey',
@@ -422,7 +422,7 @@ def scale_data_array(data_array, scale_overall=True):
 
 def run_network(data_dict,title,**config):
     quantities = config['quantities']
-    target_nodes = config['target_nodes']
+    target_node = config['target_nodes']
     verbose = config['verbose']
     save_arrays = config.get('save_arrays',False)
     out_dir = config.get('out_dir',Path('plots'))
@@ -464,7 +464,7 @@ def run_network(data_dict,title,**config):
             mapping[idx] = f"{SYMDICT[qset[-1]]},{sensor}"
             idx += 1
 
-    return network, mapping, target_nodes
+    return network, mapping, target_node
 
 
 def plot_network(coeff_xys,
@@ -723,7 +723,7 @@ def plot_heatmaps(network_windows_array,
         fig.savefig(fname=f"{plot_filename_prefix}_{coeff}_{window_size}.pdf", dpi=400)
             
         if return_figs:
-            figs.append[fig]
+            figs.append(fig)
 
     if return_figs:
         return figs
