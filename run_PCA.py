@@ -1,3 +1,15 @@
+""" 
+Created by Theresa E. Honein and Chrystal Chern as part of the
+accompanying code and data for the paper, submitted in 2026, to the
+Proceedings of the Royal Society A, "The Biomechanics of Hula Hooping"
+by C. Chern, T. E. Honein, and O. M. O'Reilly.
+
+Licensed under the GPLv3. See LICENSE in the project root for license information.
+
+20.02.2026
+
+"""
+
 import json
 from pathlib import Path
 import pprint
@@ -5,7 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-from utilities_hula_hoop import (data_to_array,
+from utilities import (data_to_array,
                                  plot_PCA_modes_by_segment,
                                  plot_PCA_variance_ratios,
                                  plot_PCA_phase_portait,
@@ -14,7 +26,7 @@ from utilities_hula_hoop import (data_to_array,
 
 if __name__ == "__main__":
 
-    VERBOSE = 1 # 0: no printing or showing plots
+    VERBOSE = 1 # 0: no printing or plot showing
                 # 1: basic overview and plots
                 # 2: overview, detailed descriptions, and plots
 
