@@ -13,7 +13,8 @@ Licensed under the GPLv3. See LICENSE in the project root for license informatio
 import json
 from pathlib import Path
 import pprint
-from utilities import plot_time_histories
+from utilities import plot_time_histories, plot_top_frequencies
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
 
@@ -21,7 +22,7 @@ if __name__ == "__main__":
                 # 1: basic overview
                 # 2: overview, detailed descriptions
 
-    WRITE_PLOTS = False # To save plots
+    WRITE_PLOTS = False # To save plots (slow)
 
     # Load data and define output directory
     with open("data/hula_hooping_records.json", 'r') as f:
@@ -72,3 +73,31 @@ if __name__ == "__main__":
         fig.write_image(OUT_DIR/"euler_derivatives.pdf")
         if VERBOSE:
             print(f"Euler derivatives plot saved as {str(OUT_DIR/"euler_derivatives.pdf")}")
+
+    # Frequency spectra and top three spectral magnitudes
+    sampling_rate = 120 # Hz
+    sensor_colors = {
+        'hoop': 'blue',
+        'tibia': 'green',
+        'metatarsal': 'orange',
+        'femur': 'purple'
+    }
+    axis_markers = {
+        'wx': 'o',
+        'wy': 's',
+        'wz': '^',
+        'psidot': 'o',
+        'thetadot': 's',
+        'phidot': '^'
+    }
+    for data_dict_freq,data_axes,title_freq in zip([data_dict_wxyz, data_dict_ptpdot],
+                                        [['wx','wy','wz'],['phidot','thetadot','psidot']],
+                                        ['angular_velocities','euler_derivatives']):
+        if VERBOSE:
+            print(f"\nPlotting top frequencies for {title_freq}.")
+        fig = plot_top_frequencies(data_dict_freq, data_axes, sampling_rate, sensor_colors, axis_markers)
+        plt.show()
+        if WRITE_PLOTS:
+            fig.savefig(OUT_DIR/f"top_frequencies_{title_freq}.pdf")
+            if VERBOSE:
+                print(f"Top frequencies plot saved as {str(OUT_DIR/f"top_frequencies_{title_freq}.pdf")}")

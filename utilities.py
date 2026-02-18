@@ -173,6 +173,7 @@ def plot_FFT(freqencies,amplitudes,
         ax.legend(loc='upper left',bbox_to_anchor=(1.01, 1))
 
 
+
 def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_slice=None,one_per=False):
     sensors_to_plot = sensor_labels.keys()
     quantities = list(data_dict.values())[0].keys()
@@ -244,6 +245,53 @@ def plot_time_histories(sensor_labels,data_dict,time,title,y_limits=None,active_
 
     return fig
 
+def get_top_frequencies(signal, fs, top_n=3):
+    """Returns the top N FFT frequencies and magnitudes."""
+    n = len(signal)
+    fft_vals = np.fft.rfft(signal)
+    freqs = np.fft.rfftfreq(n, d=1/fs)
+    mags = np.abs(fft_vals)
+
+    if len(mags) > 1:
+        # Find the top_n largest magnitudes, excluding the DC component (index 0)
+        idx = np.argsort(mags[1:])[-top_n:] + 1
+        idx = idx[::-1]  # descending order
+        return freqs[idx], mags[idx]
+    else:
+        return np.array([]), np.array([])
+
+def plot_top_frequencies(data_dict, data_axes, sampling_rate, sensor_colors, axis_markers):
+
+    plt.figure(figsize=(12, 6))
+    plt.title("Top 3 FFT Frequencies for Each Sensor Signal", fontsize=14)
+    plt.xlabel("Frequency (Hz)", fontsize=12)
+    plt.ylabel("Magnitude (log scale)", fontsize=12)
+    plt.yscale('log')
+
+    for sensor_name, axes_data in data_dict.items():
+        color = sensor_colors.get(sensor_name, "black")
+
+        for axis in data_axes:
+            signal = axes_data[axis]
+            freqs, mags = get_top_frequencies(signal, sampling_rate)
+
+            plt.plot(
+                freqs,
+                mags,
+                marker=axis_markers[axis], # Matplotlib marker
+                linestyle='', # Only show markers, no connecting line
+                markersize=10,
+                color=color,
+                markeredgecolor='DarkSlateGrey',
+                markeredgewidth=1,
+                label=f"{sensor_name} - {axis}"
+            )
+
+    plt.grid(True, which="both", ls="--", alpha=0.6)
+    plt.legend(title="Sensor and Axis", bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.tight_layout()
+
+    return plt.gcf()
 
 def plot_PCA_modes_by_segment(eigenvectors, quantities, n_modes=6):
     sensors = []
