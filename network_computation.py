@@ -117,7 +117,6 @@ Licensed under the GPLv3. See LICENSE in the project root for license informatio
 
 import networkx as nx
 from pyunicorn.timeseries.inter_system_recurrence_network import InterSystemRecurrenceNetwork
-import os
 import numpy as np
 
 
