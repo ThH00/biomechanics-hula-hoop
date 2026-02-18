@@ -613,6 +613,7 @@ def get_time_networks(data,
                       step_size=5,
                       sandwiched_couples=False,
                       verbose=False,
+                      savez=False
                     ):
     
     n_time = data.shape[0]
@@ -632,7 +633,7 @@ def get_time_networks(data,
         # Calculate the four networks
         G, G_, common_G, T_diff, C_diff, C_xys, C_yxs, T_xys, T_yxs = compute_functional_network(
             data_window, rr=rr, C_threshold=C_threshold, T_threshold=T_threshold,
-            n=n,  sandwiched_couples=sandwiched_couples, verbose=verbose
+            n=n,  sandwiched_couples=sandwiched_couples, verbose=verbose, savez=savez,
         )
         networks_data = [C_xys, C_yxs, T_xys, T_yxs]
         return networks_data
