@@ -22,6 +22,7 @@ import pprint
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
+import sys
 from utilities import (run_network,
                        plot_network,
                        SYMDICT,
@@ -131,7 +132,8 @@ if __name__ == "__main__":
             target_node_lists = network_dictionaries['target_node_lists'].item()
         else:
             if VERBOSE:
-                print("No existing data found.")
+                print("No existing data found. Compute new networks by setting COMPUTE_NEW_NETWORKS to True. Exiting.")
+                sys.exit()
 
     
     # Plot Overall Networks
@@ -183,7 +185,7 @@ if __name__ == "__main__":
                                                 step_size=STEP_SIZE)
             np.save(f"data/{title}_windows.npy", network_windows)
             if VERBOSE:
-                print(f"Saved windowed network data: {OUT_DIR}/{title}_windows.npy")
+                print(f"Saved windowed network data: data/{title}_windows.npy")
 
 
     # Plot Windowed Network Heatmaps
@@ -208,4 +210,4 @@ if __name__ == "__main__":
                 return_figs=True)
         if VERBOSE:
             plt.show()
-            print(f"Saved heatmap: {OUT_DIR}/{title}_..._{WINDOW_SIZE}.pdf")
+            print(f"Saved heatmaps: {OUT_DIR}/{title}_..._{WINDOW_SIZE}.pdf")
