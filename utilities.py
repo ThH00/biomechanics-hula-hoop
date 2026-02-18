@@ -422,7 +422,7 @@ def scale_data_array(data_array, scale_overall=True):
 
 def run_network(data_dict,title,**config):
     quantities = config['quantities']
-    target_node = config['target_nodes']
+    target_node = config['target_node']
     verbose = config['verbose']
     save_arrays = config.get('save_arrays',False)
     out_dir = config.get('out_dir',Path('plots'))
