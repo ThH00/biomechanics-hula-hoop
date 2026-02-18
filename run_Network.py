@@ -45,7 +45,7 @@ if __name__ == "__main__":
             verbose=VERBOSE,
             savez=False,
             save_arrays=True,
-            ntime=400, # to do a quicker analysis, uncomment to analyze a portion
+            # ntime=400, # to do a quicker analysis, uncomment to analyze a portion
         ),
         'psidot': dict(
             quantities={
@@ -61,7 +61,7 @@ if __name__ == "__main__":
             verbose=VERBOSE,
             savez=False,
             save_arrays=True,
-            ntime=400, # to do a quicker analysis, uncomment to analyze a portion
+            # ntime=400, # to do a quicker analysis, uncomment to analyze a portion
         ),
     }
 
