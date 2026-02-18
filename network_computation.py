@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """ 
-Original credit goes to Charlotte Geier, Hamburg University of Technology
+Modified version of original work by Charlotte Geier,
+Hamburg University of Technology
 charlotte.geier@tuhh.de
 
 File adapted by Theresa E. Honein and Chrystal Chern as part of the
