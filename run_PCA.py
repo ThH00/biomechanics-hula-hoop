@@ -18,11 +18,11 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from utilities import (data_to_array,
-                                 plot_PCA_modes_by_segment,
-                                 plot_PCA_variance_ratios,
-                                 plot_PCA_phase_portait,
-                                 plot_PCA_FFT
-                                 )
+                        plot_PCA_modes_by_segment,
+                        plot_PCA_variance_ratios,
+                        plot_PCA_phase_portait,
+                        plot_PCA_FFT
+                        )
 
 if __name__ == "__main__":
 
