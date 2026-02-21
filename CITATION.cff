@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+title: "The Biomechanics of Hula Hooping (Code)"
+version: 1.1.0
+license: "GPLv3"
+type: software
+doi: 10.5281/zenodo.18696605
+date-released: 2026-02-19
+url: "https://github.com/ThH00/biomechanics-hula-hoop"
+abstract: "This is the accompanying code and data for the paper, 'The Biomechanics of Hula Hooping' submitted to the Proceedings of the Royal Society A."
+message: "If you use this software, please cite it as below."
+authors:
+  - given-names: Chrystal
+    family-names: Chern
+    orcid: "https://orcid.org/0009-0008-1247-1180"
+  - given-names: Theresa
+    family-names: Honein
+    orcid: "https://orcid.org/0000-0002-8081-1465"
+  - given-names: Oliver
+    family-names: O'Reilly
+    orcid: "https://orcid.org/0000-0003-3773-4967"
+keywords:
+  - biomechanics
+  - hula hoop
+  - principal component analysis
+  - network analysis
+  - functional networks
