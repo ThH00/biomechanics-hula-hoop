@@ -32,4 +32,4 @@ Python 3.12.
 
 Please cite use of this code as follows:
 
-Chern, C., Honein, T., & O'Reilly, O. (2026). The Biomechanics of Hula Hooping (Code) (Version 1.1.0) [Computer software]. https://doi.org/10.5281/zenodo.18696605
+Chern, C., Honein, T., & O'Reilly, O. (2026). The Biomechanics of Hula Hooping (Code) (Version 1.1.1) [Computer software]. https://doi.org/10.5281/zenodo.18696605
