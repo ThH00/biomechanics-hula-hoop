@@ -5,8 +5,7 @@ Hamburg University of Technology
 charlotte.geier@tuhh.de
 
 File adapted by Theresa E. Honein and Chrystal Chern as part of the
-accompanying code and data for the paper, submitted in 2026, to the
-Proceedings of the Royal Society A, "The Biomechanics of Hula Hooping"
+accompanying code and data for the 2026 paper, "The Biomechanics of Hula Hooping"
 by C. Chern, T. E. Honein, and O. M. O'Reilly.
 
 The functions contained in this file are adapted from the accompanying
