@@ -6,7 +6,7 @@ type: software
 doi: 10.5281/zenodo.18696605
 date-released: 2026-02-19
 url: "https://github.com/ThH00/biomechanics-hula-hoop"
-abstract: "This is the accompanying code and data for the paper, 'The Biomechanics of Hula Hooping' submitted to the Proceedings of the Royal Society A."
+abstract: "This is the accompanying code and data for the 2026 paper, 'The Biomechanics of Hula Hooping'"
 message: "If you use this software, please cite it as below."
 authors:
   - given-names: Chrystal
