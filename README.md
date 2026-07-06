@@ -1,4 +1,4 @@
-# Code: The Biomechanics of Hula Hooping
+# Code: T​​he symphony of gyrations producing steady motions of a hula hoop: Insights from a network analysis
 
 Copyright (C) 2026  Theresa E. Honein, Chrystal Chern, and Oliver M. O'Reilly
 
@@ -10,8 +10,8 @@ Licensed under the GPLv3. See LICENSE in the project root for license informatio
 ## Overview
 
 This repository contains the accompanying code and data for the 2026 paper,
-"The Biomechanics of Hula Hooping" by C. Chern, T. E. Honein, and
-O. M. O'Reilly.
+"T​​he symphony of gyrations producing steady motions of a hula hoop: Insights
+from a network analysis" by C. Chern, T. E. Honein, and O. M. O'Reilly.
 
 ---
 ## Getting Started
@@ -32,4 +32,4 @@ Python 3.12.
 
 Please cite use of this code as follows:
 
-Chern, C., Honein, T., & O'Reilly, O. (2026). The Biomechanics of Hula Hooping (Code) (Version 1.1.1) [Computer software]. https://doi.org/10.5281/zenodo.18696605
+Chern, C., Honein, T., & O'Reilly, O. (2026). T​​he symphony of gyrations producing steady motions of a hula hoop: Insights from a network analysis (Code) (Version 1.1.2) [Computer software]. https://doi.org/10.5281/zenodo.18696605

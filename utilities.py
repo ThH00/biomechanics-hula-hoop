@@ -1,6 +1,7 @@
 """ 
 Created by Theresa E. Honein and Chrystal Chern as part of the
-accompanying code and data for the 2026 paper, "The Biomechanics of Hula Hooping"
+accompanying code and data for the 2026 paper, "The symphony of gyrations
+producing steady motions of a hula hoop: Insights from a network analysis"
 by C. Chern, T. E. Honein, and O. M. O'Reilly.
 
 Licensed under the GPLv3. See LICENSE in the project root for license information.
