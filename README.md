@@ -32,4 +32,4 @@ Python 3.12.
 
 Please cite use of this code as follows:
 
-Chern, C., Honein, T., & O'Reilly, O. (2026). T​​he symphony of gyrations producing steady motions of a hula hoop: Insights from a network analysis (Code) (Version 1.1.2) [Computer software]. https://doi.org/10.5281/zenodo.18696605
+Chern, C., Honein, T., & O'Reilly, O. (2026). T​​he symphony of gyrations producing steady motions of a hula hoop: Insights from a network analysis (Code) (Version 1.1.3) [Computer software]. https://doi.org/10.5281/zenodo.18696605
