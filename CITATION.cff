@@ -1,13 +1,15 @@
 cff-version: 1.2.0
 title: "The symphony of gyrations producing steady motions of a hula hoop: Insights from a network analysis (Code)"
 version: 1.1.2
-license: "GPLv3"
+license: GPL-3.0-or-later
 type: software
-doi: 10.5281/zenodo.18696605
 date-released: 2026-02-19
 url: "https://github.com/ThH00/biomechanics-hula-hoop"
 abstract: "This is the accompanying code and data for the 2026 paper, 'The symphony of gyrations producing steady motions of a hula hoop: Insights from a network analysis'"
 message: "If you use this software, please cite it as below."
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.18696605
 authors:
   - given-names: Chrystal
     family-names: Chern
@@ -20,7 +22,7 @@ authors:
     orcid: "https://orcid.org/0000-0003-3773-4967"
 keywords:
   - biomechanics
-  - hula hoop
-  - principal component analysis
-  - network analysis
-  - functional networks
+  - "hula hoop"
+  - "principal component analysis"
+  - "network analysis"
+  - "functional networks"
